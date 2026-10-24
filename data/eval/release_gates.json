@@ -1,0 +1,9 @@
+[
+  {"metric": "recall_at_k", "label": "Recall@5", "op": ">=", "threshold": 0.85, "blocking": true, "needs_answers": false},
+  {"metric": "mrr", "label": "MRR", "op": ">=", "threshold": 0.70, "blocking": true, "needs_answers": false},
+  {"metric": "abstention_accuracy", "label": "Abstention accuracy", "op": ">=", "threshold": 0.90, "blocking": true, "needs_answers": true},
+  {"metric": "faithfulness", "label": "Faithfulness", "op": ">=", "threshold": 0.90, "blocking": true, "needs_answers": true},
+  {"metric": "answer_correctness", "label": "Answer correctness", "op": ">=", "threshold": 0.80, "blocking": true, "needs_answers": true},
+  {"metric": "answer_relevancy", "label": "Answer relevance", "op": ">=", "threshold": 0.85, "blocking": false, "needs_answers": true},
+  {"metric": "latency_p95_s", "label": "P95 latency (s)", "op": "<=", "threshold": 4.0, "blocking": false, "needs_answers": true}
+]

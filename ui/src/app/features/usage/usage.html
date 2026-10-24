@@ -1,0 +1,329 @@
+<header class="page-head">
+  <div>
+    <h1>Usage</h1>
+    <p class="lead">
+      What the assistant costs to run: every model call with its tokens, time and errors, from the
+      local usage log. Click a tile, a day, a purpose or a model to see those calls.
+    </p>
+  </div>
+  <div class="head-actions">
+    <mat-chip-listbox
+      aria-label="Time range"
+      [value]="days()"
+      (change)="days.set($event.value ?? 14)"
+    >
+      @for (d of ranges; track d) {
+        <mat-chip-option [value]="d">{{ d }} days</mat-chip-option>
+      }
+    </mat-chip-listbox>
+    <button mat-stroked-button (click)="load()"><mat-icon>refresh</mat-icon> Refresh</button>
+  </div>
+</header>
+
+@if (error()) {
+  <div class="error" role="alert"><mat-icon>error</mat-icon> {{ error() }}</div>
+}
+
+@if (report(); as r) {
+  <!-- LangSmith status -->
+  <div class="tracing" [class.on]="r.tracing.enabled">
+    <mat-icon>{{ r.tracing.enabled ? 'insights' : 'visibility_off' }}</mat-icon>
+    @if (r.tracing.enabled) {
+      <span
+        ><b>LangSmith tracing is on</b> · project <code>{{ r.tracing.project }}</code>
+        @if (r.tracing.sampling_rate < 1) {
+          · {{ r.tracing.sampling_rate * 100 }}% of requests
+        }
+        · open a call below to see its full trace.</span
+      >
+      <a mat-stroked-button [href]="r.tracing.url" target="_blank" rel="noopener">
+        <mat-icon>open_in_new</mat-icon> Open LangSmith
+      </a>
+    } @else {
+      <span
+        >LangSmith tracing is off. Add <code>LANGSMITH_TRACING</code> and
+        <code>LANGSMITH_API_KEY</code> to .env to see full traces; this page works without it.</span
+      >
+    }
+  </div>
+
+  <!-- KPI tiles: click to filter the calls list -->
+  <div class="tiles">
+    <button class="tile" [class.active]="!hasFilters() && sort() === 'newest'" (click)="showAll()">
+      <span class="t-label"><mat-icon>bolt</mat-icon> Model calls</span>
+      <span class="t-value">{{ r.totals.calls | number }}</span>
+      <span class="t-help">+ {{ r.totals.embed_texts | number }} texts embedded · see all</span>
+    </button>
+    <button class="tile" [class.active]="sort() === 'tokens'" (click)="showBiggest()">
+      <span class="t-label"><mat-icon>token</mat-icon> Tokens</span>
+      <span class="t-value">{{ compact(r.totals.input_tokens + r.totals.output_tokens) }}</span>
+      <span class="t-help"
+        >{{ compact(r.totals.input_tokens) }} in · {{ compact(r.totals.output_tokens) }} out ·
+        biggest first</span
+      >
+    </button>
+    <button class="tile" [class.active]="status() === 'slow'" (click)="show('status', 'slow')">
+      <span class="t-label"><mat-icon>timer</mat-icon> Latency</span>
+      <span class="t-value">{{ seconds(r.totals.avg_latency_ms) }}</span>
+      <span class="t-help"
+        >average · p95 {{ seconds(r.totals.p95_latency_ms) }} · click for the slowest</span
+      >
+    </button>
+    <button
+      class="tile"
+      [class.bad]="r.totals.errors > 0"
+      [class.active]="status() === 'errors'"
+      (click)="show('status', 'errors')"
+    >
+      <span class="t-label"><mat-icon>error_outline</mat-icon> Errors</span>
+      <span class="t-value">{{ r.totals.errors }}</span>
+      <span class="t-help">failed model calls (e.g. quota) · click to review</span>
+    </button>
+    <div class="tile static">
+      <span class="t-label"><mat-icon>payments</mat-icon> Cost</span>
+      <span class="t-value">{{ money(r.totals.cost) }}</span>
+      <span class="t-help">
+        @if (r.priced_models.length) {
+          estimate from model_prices.json
+        } @else {
+          add prices in model_prices.json
+        }
+      </span>
+    </div>
+  </div>
+
+  <!-- Per day: click a bar to see that day's calls -->
+  <section class="card">
+    <div class="card-head">
+      <h2>Per day</h2>
+      <span class="muted small">click a day to filter</span>
+      <span class="spacer"></span>
+      <mat-chip-listbox
+        aria-label="Chart metric"
+        [value]="metric()"
+        (change)="metric.set($event.value ?? 'calls')"
+      >
+        <mat-chip-option value="calls">Calls</mat-chip-option>
+        <mat-chip-option value="tokens">Tokens</mat-chip-option>
+        <mat-chip-option value="cost">Cost</mat-chip-option>
+      </mat-chip-listbox>
+    </div>
+    <div class="chart" role="group" [attr.aria-label]="'Model ' + metric() + ' per day'">
+      @for (b of bars(); track b.date) {
+        <button
+          class="bar-col"
+          [class.selected]="day() === b.date"
+          [class.dim]="!!day() && day() !== b.date"
+          [disabled]="!b.value"
+          (click)="show('day', b.date)"
+          [matTooltip]="(b.date | date: 'mediumDate') + ': ' + b.label"
+          [attr.aria-label]="(b.date | date: 'mediumDate') + ': ' + b.label"
+        >
+          <span class="bar-value">{{ b.value ? b.label : '' }}</span>
+          <span class="bar" [style.height.%]="b.height"></span>
+          <span class="bar-date">{{ b.date | date: 'd/M' }}</span>
+        </button>
+      }
+    </div>
+  </section>
+
+  <div class="two">
+    <!-- By purpose -->
+    <section class="card">
+      <div class="card-head"><h2>By purpose</h2></div>
+      <!-- First 5 rows visible, the rest scroll inside the card (same as the Evaluation lists) -->
+      <div class="rows" [appShowRows]="5" rowSelector=".row">
+        @for (p of r.by_purpose; track p.purpose) {
+          <button
+            class="row"
+            [class.active]="purpose() === p.purpose"
+            (click)="show('purpose', p.purpose)"
+          >
+            <mat-icon class="r-icon">{{ purposeIcon(p.purpose) }}</mat-icon>
+            <span class="r-main">
+              <span class="r-top">
+                <span class="r-name">{{ p.purpose }}</span>
+                <span class="r-num">
+                  {{ p.calls ? plural(p.calls, 'call') : plural(p.embed_texts, 'text') }}
+                </span>
+              </span>
+              <span class="share"
+                ><span
+                  class="fill"
+                  [style.width.%]="((p.calls + p.embed_texts) / maxPurposeCalls()) * 100"
+                ></span
+              ></span>
+              <span class="r-meta">
+                @if (p.calls) {
+                  {{ compact(p.input_tokens + p.output_tokens) }} tokens ·
+                }
+                avg {{ seconds(p.avg_latency_ms) }}
+                @if (p.cost !== null) {
+                  · {{ money(p.cost) }}
+                }
+                @if (p.errors) {
+                  · <span class="err">{{ plural(p.errors, 'error') }}</span>
+                }
+              </span>
+            </span>
+          </button>
+        } @empty {
+          <p class="muted">No model calls in this period.</p>
+        }
+      </div>
+    </section>
+
+    <!-- By model -->
+    <section class="card">
+      <div class="card-head"><h2>By model</h2></div>
+      <div class="rows" [appShowRows]="5" rowSelector=".row">
+        @for (m of r.by_model; track m.model) {
+          <button class="row" [class.active]="model() === m.model" (click)="show('model', m.model)">
+            <mat-icon class="r-icon">memory</mat-icon>
+            <span class="r-main">
+              <span class="r-top">
+                <span class="r-name">{{ m.model }}</span>
+                <span class="r-num">
+                  {{ m.calls ? plural(m.calls, 'call') : plural(m.embed_texts, 'text') }}
+                </span>
+              </span>
+              <span class="r-meta">
+                @if (m.calls) {
+                  {{ compact(m.input_tokens) }} in · {{ compact(m.output_tokens) }} out ·
+                }
+                avg {{ seconds(m.avg_latency_ms) }} · p95 {{ seconds(m.p95_latency_ms) }}
+                @if (m.cost !== null) {
+                  · {{ money(m.cost) }}
+                }
+              </span>
+            </span>
+          </button>
+        } @empty {
+          <p class="muted">No model calls in this period.</p>
+        }
+      </div>
+    </section>
+  </div>
+
+  <!-- All calls, filterable -->
+  <section class="card" #callsCard>
+    <div class="card-head">
+      <h2>Calls ({{ calls().length }})</h2>
+      <span class="spacer"></span>
+      <input
+        class="search"
+        type="search"
+        placeholder="Search purpose, model, error…"
+        aria-label="Search calls"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+      />
+    </div>
+    <div class="toolbar">
+      <mat-chip-listbox
+        aria-label="Sort calls"
+        [value]="sort()"
+        (change)="sort.set($event.value ?? 'newest')"
+      >
+        <mat-chip-option value="newest">Newest</mat-chip-option>
+        <mat-chip-option value="slowest">Slowest</mat-chip-option>
+        <mat-chip-option value="tokens">Most tokens</mat-chip-option>
+      </mat-chip-listbox>
+      @if (hasFilters()) {
+        <span class="filters">
+          @if (status() !== 'all') {
+            <button class="filter" (click)="status.set('all')">
+              {{ status() === 'errors' ? 'Errors only' : 'Slow (≥ p95)' }}
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+          @if (day(); as d) {
+            <button class="filter" (click)="day.set(null)">
+              {{ d | date: 'mediumDate' }} <mat-icon>close</mat-icon>
+            </button>
+          }
+          @if (purpose(); as p) {
+            <button class="filter" (click)="purpose.set(null)">
+              {{ p }} <mat-icon>close</mat-icon>
+            </button>
+          }
+          @if (model(); as m) {
+            <button class="filter" (click)="model.set(null)">
+              {{ m }} <mat-icon>close</mat-icon>
+            </button>
+          }
+          @if (search()) {
+            <button class="filter" (click)="search.set('')">
+              “{{ search() }}” <mat-icon>close</mat-icon>
+            </button>
+          }
+          <button mat-button (click)="clearFilters()">Clear all</button>
+        </span>
+      }
+    </div>
+
+    <p class="muted small hint-line">
+      Click a call for its details. Free-tier throttling adds waiting time (after a short burst,
+      calls are spaced a few seconds apart).
+    </p>
+    <div class="calls" [appShowRows]="5" rowSelector=".call">
+      @for (c of calls(); track c.id) {
+        <button
+          class="call"
+          [class.open]="expanded() === c.id"
+          [class.failed]="!!c.error"
+          (click)="toggle(c.id)"
+        >
+          <mat-icon class="c-icon">{{
+            c.error ? 'error_outline' : purposeIcon(c.purpose)
+          }}</mat-icon>
+          <span class="c-main">
+            <span class="c-name"
+              ><b>{{ c.purpose }}</b> · {{ c.model }}</span
+            >
+            <span class="c-meta">{{ c.created_at | date: 'short' }} · {{ size(c) }}</span>
+          </span>
+          <span class="c-lat">
+            <span class="lat-bar"
+              ><span class="fill" [style.width.%]="(c.latency_ms / maxLatency()) * 100"></span
+            ></span>
+            <span class="c-time">{{ seconds(c.latency_ms) }}</span>
+          </span>
+        </button>
+        @if (expanded() === c.id) {
+          <div class="c-detail">
+            <dl>
+              <dt>When</dt>
+              <dd>{{ c.created_at | date: 'medium' }}</dd>
+              <dt>Purpose</dt>
+              <dd>{{ c.purpose }}</dd>
+              <dt>Model</dt>
+              <dd>{{ c.model }}</dd>
+              <dt>{{ c.kind === 'embed' ? 'Texts' : 'Tokens' }}</dt>
+              <dd>{{ size(c) }}</dd>
+              <dt>Time</dt>
+              <dd>{{ seconds(c.latency_ms) }}</dd>
+              <dt>Cost</dt>
+              <dd>{{ money(c.cost) }}</dd>
+              @if (c.error) {
+                <dt>Error</dt>
+                <dd class="err">{{ c.error }}</dd>
+              }
+            </dl>
+            @if (r.tracing.enabled && c.run_id) {
+              <button
+                mat-stroked-button
+                (click)="openTrace(c, $event)"
+                [disabled]="opening() === c.id"
+              >
+                <mat-icon>open_in_new</mat-icon> Open trace in LangSmith
+              </button>
+            }
+          </div>
+        }
+      } @empty {
+        <p class="muted empty">No calls match these filters.</p>
+      }
+    </div>
+  </section>
+}

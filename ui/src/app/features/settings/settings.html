@@ -1,0 +1,344 @@
+<header class="page-head">
+  <div>
+    <h1>Settings</h1>
+    <p class="lead">
+      The configuration the assistant uses now. Search settings are never typed in by hand: the
+      optimizer measures alternatives, recommends one, and you approve or reject it here. The answer
+      mode (Fast / Agentic / Auto) you switch directly below.
+    </p>
+  </div>
+  <span class="status-pill" [class.down]="healthy() === false" [matTooltip]="baseUrl">
+    <mat-icon>{{ healthy() === false ? 'cloud_off' : 'cloud_done' }}</mat-icon>
+    @switch (healthy()) {
+      @case (true) {
+        API connected
+      }
+      @case (false) {
+        API not reachable
+      }
+      @default {
+        Checking API…
+      }
+    }
+  </span>
+</header>
+
+@if (error()) {
+  <div class="error" role="alert"><mat-icon>error</mat-icon> {{ error() }}</div>
+}
+@if (notice()) {
+  <div class="info" role="status"><mat-icon>task_alt</mat-icon> {{ notice() }}</div>
+}
+
+<!-- How a setting changes: measure -> review -> apply -->
+<ol class="steps" aria-label="How settings change">
+  <li [class.done]="step() > 1" [class.current]="step() === 1">
+    <span class="dot">{{ step() > 1 ? '✓' : '1' }}</span>
+    <span><b>Measure</b><br /><span class="muted">The optimizer tests alternatives</span></span>
+  </li>
+  <li [class.done]="step() > 2" [class.current]="step() === 2">
+    <span class="dot">{{ step() > 2 ? '✓' : '2' }}</span>
+    <span><b>Review</b><br /><span class="muted">You check the recommendation here</span></span>
+  </li>
+  <li [class.done]="step() === 3" [class.current]="false">
+    <span class="dot">{{ step() === 3 ? '✓' : '3' }}</span>
+    <span><b>Apply</b><br /><span class="muted">Used from the next question</span></span>
+  </li>
+</ol>
+
+<!-- Optimizer recommendation -->
+@if (recommendation(); as rec) {
+  <section class="card rec" [class]="'card rec ' + rec.status">
+    <div class="rec-head">
+      <mat-icon class="rec-icon">
+        {{
+          rec.status === 'pending'
+            ? 'auto_fix_high'
+            : rec.status === 'applied'
+              ? 'check_circle'
+              : 'do_not_disturb_on'
+        }}
+      </mat-icon>
+      <div class="rec-title">
+        <h2>
+          {{
+            rec.status === 'pending'
+              ? 'A recommendation is waiting for you'
+              : rec.status === 'applied'
+                ? 'Recommendation applied'
+                : rec.status === 'rejected'
+                  ? 'Recommendation rejected'
+                  : 'Recommendation replaced'
+          }}
+        </h2>
+        <span class="muted small">
+          Made {{ rec.created_at | date: 'medium' }}
+          @if (rec.report.test_set) {
+            · measured on {{ rec.report.test_set }}
+          }
+          @if (rec.decided_at) {
+            · decided {{ rec.decided_at | date: 'medium' }}
+          }
+        </span>
+      </div>
+      @if (rec.status !== 'pending') {
+        <button mat-button (click)="showDetails.set(!showDetails())">
+          {{ showDetails() ? 'Hide details' : 'Show details' }}
+          <mat-icon iconPositionEnd>{{ showDetails() ? 'expand_less' : 'expand_more' }}</mat-icon>
+        </button>
+      }
+    </div>
+
+    <!-- What changes, always visible as chips -->
+    <div class="change-chips">
+      @for (c of changes(); track c.label) {
+        <span class="change" [matTooltip]="c.help">
+          <span class="c-label">{{ c.label }}</span>
+          <span class="c-from">{{ c.from }}</span>
+          <mat-icon>arrow_forward</mat-icon>
+          <span class="c-to">{{ c.to }}</span>
+        </span>
+      }
+    </div>
+
+    @if (rec.status === 'pending' || showDetails()) {
+      @if (rec.report.summary) {
+        <p class="summary">{{ rec.report.summary }}</p>
+      }
+      <div class="effects">
+        @for (key of compareMetrics; track key) {
+          <div class="effect" [matTooltip]="metricInfo[key].help">
+            <span class="e-label">{{ metricInfo[key].label }}</span>
+            <span class="e-values">
+              <span class="c-from">{{ fmt(rec.report.baseline_metrics[key]) }}</span>
+              <mat-icon>arrow_forward</mat-icon>
+              <b>{{ fmt(rec.report.winner_metrics[key]) }}</b>
+            </span>
+            @if (delta(rec, key); as d) {
+              <span class="delta" [class.neg]="d.startsWith('-')">{{ d }}</span>
+            }
+          </div>
+        }
+      </div>
+      <div class="notes">
+        @if (rec.report.rationale) {
+          <div>
+            <h3><mat-icon>lightbulb</mat-icon> Why</h3>
+            <p>{{ rec.report.rationale }}</p>
+          </div>
+        }
+        @if (rec.report.risks && rec.report.risks !== 'None') {
+          <div>
+            <h3><mat-icon>report</mat-icon> Risks</h3>
+            <p>{{ rec.report.risks }}</p>
+          </div>
+        }
+      </div>
+    }
+
+    @if (rec.status === 'pending') {
+      @if (rec.stale) {
+        <div class="error">
+          <mat-icon>history</mat-icon>
+          <span
+            >The configuration changed after this recommendation was made, so its numbers no longer
+            apply. Run the optimizer again below.</span
+          >
+        </div>
+      }
+      @if (deciding()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      <div class="rec-actions">
+        <button mat-stroked-button (click)="decide('reject')" [disabled]="deciding()">
+          <mat-icon>close</mat-icon> Reject
+        </button>
+        <button mat-flat-button (click)="decide('apply')" [disabled]="deciding() || rec.stale">
+          <mat-icon>check</mat-icon> Apply
+        </button>
+      </div>
+    }
+  </section>
+} @else {
+  <section class="card rec empty">
+    <div class="rec-head">
+      <mat-icon class="rec-icon">auto_fix_high</mat-icon>
+      <div class="rec-title">
+        <h2>No recommendation yet</h2>
+        <span class="muted small">
+          Run the optimizer below: the agents test alternative settings (search only, no answers
+          generated) and the result appears here for your approval.
+        </span>
+      </div>
+    </div>
+  </section>
+}
+
+<!-- Start the optimizer (not while a valid recommendation waits for a decision) -->
+@if (recommendation()?.status !== 'pending' || recommendation()?.stale) {
+  <section class="card optimize">
+    <div class="rec-head">
+      <mat-icon class="rec-icon">science</mat-icon>
+      <div class="rec-title">
+        <h2>Find better settings</h2>
+        <span class="muted small">
+          The optimizer measures the current settings on a test set, tries alternatives and
+          recommends the best. <b>Run optimizer</b> uses the built-in test set (questions about the
+          demo documents); for your own documents choose <b>Use my test set</b>. A few AI calls;
+          nothing changes until you apply the result.
+        </span>
+      </div>
+    </div>
+    <div class="rec-actions start">
+      <button mat-flat-button (click)="optimize()" [disabled]="optimizing()">
+        <mat-icon>play_arrow</mat-icon> Run optimizer
+      </button>
+      <button
+        mat-stroked-button
+        (click)="file.click()"
+        [disabled]="optimizing()"
+        matTooltip="Use your own questions for your documents (.jsonl, same format as the quality check)"
+      >
+        <mat-icon>upload_file</mat-icon> Use my test set
+      </button>
+      <input #file type="file" accept=".jsonl" hidden (change)="onFile($event)" />
+    </div>
+    @if (job(); as j) {
+      @if (j.state === 'running') {
+        <mat-progress-bar mode="indeterminate" />
+        <p class="muted small">Optimizing on {{ j.test_set }}… this can take a few minutes.</p>
+      }
+      @if (j.steps.length && j.state !== 'idle') {
+        <ol class="job-steps">
+          @for (s of j.steps.slice(-6); track $index) {
+            <li>{{ s }}</li>
+          }
+        </ol>
+      }
+      @if (j.state === 'done') {
+        <div class="info" role="status"><mat-icon>task_alt</mat-icon> {{ outcomeText(j) }}</div>
+      }
+      @if (j.state === 'failed') {
+        <div class="error" role="alert"><mat-icon>error</mat-icon> {{ j.error }}</div>
+      }
+    }
+    <div class="command">
+      <span class="muted small">Or in a terminal:</span>
+      <code>{{ command }}</code>
+      <button mat-icon-button (click)="copyCommand()" [matTooltip]="copied() ? 'Copied' : 'Copy'">
+        <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
+      </button>
+    </div>
+  </section>
+}
+
+<!-- Active configuration: the admin's direct choices first, then the measured settings -->
+@if (config(); as cfg) {
+  <h2 class="section">Active configuration</h2>
+  <section class="card choices">
+    <div class="g-head">
+      <mat-icon>tune</mat-icon>
+      <h3>Your choices</h3>
+      <span class="muted small">Switched here directly · used from the next question</span>
+    </div>
+    <div class="choice-grid">
+      <div class="choice">
+        <span class="s-label">Answer mode</span>
+        <mat-button-toggle-group
+          #modeToggle="matButtonToggleGroup"
+          class="mode-switch"
+          aria-label="Answer mode"
+          hideSingleSelectionIndicator
+          [value]="cfg.mode"
+          [disabled]="switching()"
+          (change)="changeMode($event.value, modeToggle)"
+        >
+          @for (m of modes; track m) {
+            <mat-button-toggle [value]="m">{{ display('mode', m) }}</mat-button-toggle>
+          }
+        </mat-button-toggle-group>
+        <span class="s-help"
+          >Fast = 1 AI call · Agentic = plans, checks and verifies (about 4) · Auto = fast first,
+          agentic only when needed</span
+        >
+      </div>
+      <div class="choice">
+        <span class="s-label">Writes answers</span>
+        <mat-button-toggle-group
+          #providerToggle="matButtonToggleGroup"
+          class="mode-switch"
+          aria-label="Answer model"
+          hideSingleSelectionIndicator
+          [value]="cfg.chat_provider"
+          [disabled]="switching()"
+          (change)="changeProvider($event.value, providerToggle)"
+        >
+          @for (p of providers(); track p.name) {
+            <mat-button-toggle
+              [value]="p.name"
+              [disabled]="!p.configured"
+              [matTooltip]="p.configured ? p.model : 'Not set up: add its API key to .env'"
+              >{{ providerNames[p.name] }}</mat-button-toggle
+            >
+          }
+        </mat-button-toggle-group>
+        <span class="s-help">Answer model · Model: {{ modelOf(cfg.chat_provider) }}</span>
+      </div>
+      <div class="choice">
+        <span class="s-label">Automatic fallback</span>
+        <mat-slide-toggle
+          #fallback
+          aria-label="Automatic fallback"
+          [checked]="cfg.chat_fallback && canFallBack()"
+          [disabled]="switching() || !canFallBack()"
+          (change)="changeFallback($event.checked, fallback)"
+        ></mat-slide-toggle>
+        <span class="s-help">
+          @if (canFallBack()) {
+            When {{ providerNames[cfg.chat_provider] }} is out of quota, overloaded or too slow,
+            {{ providerNames[cfg.chat_provider === 'gemini' ? 'groq' : 'gemini'] }} answers instead.
+          } @else {
+            Needs a second provider: add GROQ_API_KEY to .env and restart the API.
+          }
+        </span>
+      </div>
+    </div>
+    <p class="muted small note">
+      <mat-icon inline>info</mat-icon> Search always uses Gemini embeddings. Free tiers: Google may
+      use Gemini requests to improve its products; Groq says it doesn't train on API data.
+    </p>
+  </section>
+
+  <h2 class="section">Measured settings</h2>
+  <p class="muted small sub">Changed only through an optimizer recommendation you approve.</p>
+  <div class="groups">
+    @for (g of groups(); track g.group) {
+      <section class="card group">
+        <div class="g-head">
+          <mat-icon>{{ g.icon }}</mat-icon>
+          <h3>{{ g.group }}</h3>
+        </div>
+        @for (s of g.items; track s.key) {
+          <div class="setting" [class.changed]="changedKeys().has(s.key)">
+            <div class="s-top">
+              <span class="s-label">{{ s.label }}</span>
+              @if (changedKeys().has(s.key)) {
+                <span class="new" matTooltip="Changed by the last applied recommendation"
+                  >changed</span
+                >
+              }
+              <span class="s-value" [class.pill]="typeof s.value === 'string'">
+                {{ display(s.key, s.value) }}
+              </span>
+            </div>
+            <div class="s-help">{{ s.help }}</div>
+          </div>
+        }
+      </section>
+    }
+  </div>
+  <p class="muted small source">
+    <mat-icon inline>description</mat-icon> Stored in <code>rag_config.json</code> (versioned in
+    git, like appsettings.json).
+  </p>
+}

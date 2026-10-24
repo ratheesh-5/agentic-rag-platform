@@ -1,0 +1,13 @@
+{
+  "chunk_size": 800,
+  "chunk_overlap": 100,
+  "top_k": 5,
+  "retrieval": "hybrid",
+  "hybrid_candidates": 20,
+  "similarity_threshold": 0.68,
+  "mode": "fast",
+  "max_rewrites": 2,
+  "max_regenerations": 1,
+  "chat_provider": "gemini",
+  "chat_fallback": true
+}

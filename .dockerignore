@@ -1,0 +1,18 @@
+# Keep the API image small and free of secrets/local data.
+.env
+.env.*
+!.env.example
+.claude/
+local/
+.git/
+.venv/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+data/index/
+data/uploads/
+data/*.db
+ui/
+tests/
+docs/
+scripts/

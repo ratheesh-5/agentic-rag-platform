@@ -1,0 +1,140 @@
+<mat-sidenav-container class="shell">
+  <mat-sidenav #nav class="sidenav" [mode]="narrow() ? 'over' : 'side'" [opened]="!narrow()">
+    <div class="side-top">
+      <div class="brand"><mat-icon>auto_awesome</mat-icon> Knowledge Assistant</div>
+      <a mat-stroked-button class="new-chat" routerLink="/chat" (click)="closeOnNarrow(nav)">
+        <mat-icon>add</mat-icon> New chat
+      </a>
+    </div>
+
+    <div class="side-label recent">
+      Recent
+      @if (conversations.list().length) {
+        <button
+          mat-icon-button
+          class="delete-all"
+          (click)="deleteAllConversations()"
+          matTooltip="Delete all conversations"
+          aria-label="Delete all conversations"
+        >
+          <mat-icon>delete_sweep</mat-icon>
+        </button>
+      }
+    </div>
+    <nav class="conversations" aria-label="Conversations">
+      @for (c of conversations.list(); track c.id) {
+        <a
+          class="conversation"
+          routerLink="/chat"
+          [queryParams]="{ c: c.id }"
+          [class.active]="activeId() === c.id"
+          (click)="closeOnNarrow(nav)"
+          [matTooltip]="c.title"
+          matTooltipShowDelay="600"
+        >
+          <span class="conversation-text">
+            <span class="conversation-title">{{ c.title }}</span>
+            @if (mixedCollections()) {
+              <span class="conversation-collection">{{ c.collection }}</span>
+            }
+          </span>
+          <button
+            mat-icon-button
+            class="conversation-delete"
+            (click)="deleteConversation($event, c.id, c.title)"
+            aria-label="Delete conversation"
+          >
+            <mat-icon>delete_outline</mat-icon>
+          </button>
+        </a>
+      } @empty {
+        <div class="empty">No conversations yet</div>
+      }
+    </nav>
+
+    @if (keyStore.user() && !keyStore.isAdmin()) {
+      <div class="side-bottom">
+        <a
+          class="admin-link"
+          routerLink="/documents"
+          routerLinkActive="active"
+          (click)="closeOnNarrow(nav)"
+        >
+          <mat-icon>folder_shared</mat-icon> My documents
+        </a>
+      </div>
+    } @else if (!keyStore.isAdmin() && googleClientId()) {
+      <p class="side-hint">Sign in to upload your own documents and ask about them.</p>
+    }
+    @if (keyStore.isAdmin()) {
+      <div class="side-bottom">
+        <div class="side-label">Admin</div>
+        @for (page of adminPages; track page.path) {
+          <a
+            class="admin-link"
+            [routerLink]="page.path"
+            routerLinkActive="active"
+            (click)="closeOnNarrow(nav)"
+          >
+            <mat-icon>{{ page.icon }}</mat-icon> {{ page.label }}
+          </a>
+        }
+      </div>
+    }
+  </mat-sidenav>
+
+  <mat-sidenav-content class="main">
+    <mat-toolbar class="toolbar">
+      @if (narrow()) {
+        <button mat-icon-button (click)="nav.toggle()" aria-label="Menu">
+          <mat-icon>menu</mat-icon>
+        </button>
+        <span class="toolbar-brand">Knowledge Assistant</span>
+      }
+      <span class="spacer"></span>
+      @if (keyStore.user(); as user) {
+        <!-- Signed in with Google: photo (or initial) opens the account menu -->
+        @if (keyStore.isAdmin()) {
+          <span class="admin-badge"><mat-icon inline>admin_panel_settings</mat-icon> Admin</span>
+        }
+        <button
+          mat-icon-button
+          class="avatar-button"
+          [matMenuTriggerFor]="account"
+          [attr.aria-label]="'Account: ' + user.name"
+        >
+          @if (user.picture) {
+            <img class="avatar" [src]="user.picture" alt="" referrerpolicy="no-referrer" />
+          } @else {
+            <span class="avatar initial">{{ (user.name || user.email)[0] }}</span>
+          }
+        </button>
+        <mat-menu #account="matMenu" xPosition="before">
+          <div class="account-info">
+            <b>{{ user.name }}</b>
+            <span>{{ user.email }}</span>
+          </div>
+          <button mat-menu-item (click)="signOut()"><mat-icon>logout</mat-icon> Sign out</button>
+          <button mat-menu-item (click)="deleteAccount()">
+            <mat-icon>person_remove</mat-icon> Delete my account
+          </button>
+        </mat-menu>
+      } @else if (keyStore.isAdmin()) {
+        <span class="admin-badge"><mat-icon inline>admin_panel_settings</mat-icon> Admin</span>
+        <button mat-icon-button (click)="signOut()" matTooltip="Sign out" aria-label="Sign out">
+          <mat-icon>logout</mat-icon>
+        </button>
+      } @else if (googleClientId()) {
+        <app-google-sign-in [clientId]="googleClientId()" />
+      } @else {
+        <button mat-button (click)="signIn()">
+          <mat-icon>admin_panel_settings</mat-icon> Admin sign in
+        </button>
+      }
+    </mat-toolbar>
+
+    <div class="outlet">
+      <router-outlet />
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

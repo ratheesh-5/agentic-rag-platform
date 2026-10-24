@@ -1,0 +1,429 @@
+.small {
+  font: var(--mat-sys-body-small);
+}
+
+// --- Header status pill ----------------------------------------------------------------------
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font: var(--mat-sys-label-large);
+  background: var(--ok-bg);
+  color: var(--ok);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &.down {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-error);
+  }
+}
+
+// --- Measure -> review -> apply ----------------------------------------------------------------
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    flex: 1 1 200px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    font: var(--mat-sys-body-small);
+
+    &.current {
+      border-color: var(--mat-sys-primary);
+      background: var(--mat-sys-primary-container);
+    }
+    &.done .dot {
+      background: var(--ok);
+      color: #fff;
+    }
+  }
+}
+
+.dot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--mat-sys-surface-container-high);
+  font: var(--mat-sys-label-large);
+
+  .current & {
+    background: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+  }
+}
+
+// --- Recommendation card ------------------------------------------------------------------------
+.rec {
+  &.pending {
+    border: 2px solid var(--mat-sys-primary);
+    background: var(--mat-sys-surface-container-low);
+  }
+  &.applied {
+    border-color: var(--ok);
+  }
+}
+
+.rec-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rec-icon {
+  flex: none;
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: var(--mat-sys-primary);
+
+  .applied & {
+    color: var(--ok);
+  }
+  .rejected &,
+  .superseded & {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.rec-title {
+  flex: 1;
+  min-width: 0;
+
+  h2 {
+    margin: 0;
+    font: var(--mat-sys-title-large);
+  }
+}
+
+.change-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+
+.change {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font: var(--mat-sys-label-large);
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.c-label {
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.c-from {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.summary {
+  margin: 12px 0;
+  font: var(--mat-sys-title-medium);
+}
+
+.effects {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.effect {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface);
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+.e-label {
+  font: var(--mat-sys-label-medium);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.e-values {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: var(--mat-sys-title-medium);
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.delta {
+  align-self: flex-start;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--ok-bg);
+  color: var(--ok);
+  font: var(--mat-sys-label-medium);
+
+  &.neg {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-error);
+  }
+}
+
+.notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px 24px;
+  margin-top: 12px;
+
+  h3 {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    font: var(--mat-sys-title-small);
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  p {
+    margin: 4px 0;
+    font: var(--mat-sys-body-medium);
+  }
+}
+
+.rec-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.rec-actions.start {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+// Last progress lines of the optimizer run, like a small terminal.
+.job-steps {
+  margin: 8px 0;
+  padding: 8px 8px 8px 28px;
+  border-radius: 8px;
+  background: var(--mat-sys-surface-container);
+  font: var(--mat-sys-body-small);
+  font-family: ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+
+.command {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 4px 4px 4px 14px;
+  border-radius: 10px;
+  background: var(--mat-sys-surface-container);
+
+  code {
+    flex: 1;
+    overflow-wrap: anywhere;
+  }
+}
+
+// --- Active configuration -------------------------------------------------------------------
+.section {
+  margin: 8px 0 0;
+  font: var(--mat-sys-title-medium);
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px; // cards in a row share one height (grid default: stretch)
+}
+
+// "Your choices": the three direct switches side by side, divided by thin lines.
+.choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  // Narrow screens: one below the other, divided by lines across.
+  @media (max-width: 1000px) {
+    grid-template-columns: 1fr;
+
+    .choice {
+      padding-left: 0;
+    }
+
+    .choice + .choice {
+      border-left: none;
+      border-top: 1px solid var(--mat-sys-outline-variant);
+    }
+  }
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 16px 6px;
+
+  &:first-child {
+    padding-left: 0;
+  }
+
+  & + & {
+    border-left: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  .s-label {
+    flex: none; // in this column layout the label must not stretch (it pushed controls down)
+  }
+
+  .mode-switch {
+    margin-left: 0;
+  }
+
+  mat-slide-toggle {
+    margin: 5px 0; // same 42px row as the switches next to it
+  }
+}
+
+.choices {
+  margin-bottom: 8px;
+
+  .g-head {
+    flex-wrap: wrap;
+
+    h3 {
+      white-space: nowrap;
+    }
+
+    .muted {
+      margin-left: auto;
+    }
+  }
+}
+
+.note {
+  margin: 4px 0 0;
+}
+
+.sub {
+  margin: -8px 0 12px;
+}
+
+.g-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+  }
+
+  h3 {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
+}
+
+.setting {
+  padding: 10px 0;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  &.changed .s-value {
+    color: var(--ok);
+  }
+}
+
+.s-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.s-label {
+  flex: 1;
+  font: var(--mat-sys-title-small);
+}
+
+// Fast / Agentic / Auto switch in the Answering group: compact, right-aligned like a value.
+.mode-switch {
+  margin-left: auto;
+  --mat-standard-button-toggle-height: 30px;
+  font: var(--mat-sys-label-medium);
+}
+
+.s-value {
+  font: var(--mat-sys-title-small);
+  color: var(--mat-sys-primary);
+  white-space: nowrap;
+
+  &.pill {
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+}
+
+.new {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--ok-bg);
+  color: var(--ok);
+  font: var(--mat-sys-label-small);
+}
+
+.s-help {
+  margin-top: 2px;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.source {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

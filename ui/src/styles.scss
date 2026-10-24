@@ -1,0 +1,288 @@
+// Include theming for Angular Material with `mat.theme()`.
+// This Sass mixin will define CSS variables that are used for styling Angular Material
+// components according to the Material 3 design spec.
+// Learn more about theming and how to use it for your application's
+// custom components at https://material.angular.dev/guide/theming
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+// App-specific colour tokens (Material has no "success" or "warning" colour).
+:root {
+  --ok: #1b7f3b;
+  --ok-bg: #e8f5ec;
+  --warn: #8a4b00;
+  --warn-bg: #fff1dc;
+}
+
+body {
+  // Default the application to a light color theme. This can be changed to
+  // `dark` to enable the dark color theme, or to `light dark` to defer to the
+  // user's system settings.
+  color-scheme: light;
+
+  // Set a default background, font and text colors for the application using
+  // Angular Material's system-level CSS variables. Learn more about these
+  // variables at https://material.angular.dev/guide/system-variables
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+
+  // Reset the user agent margin.
+  margin: 0;
+  height: 100%;
+}
+// Shared message banners used by every page: an icon + one text element (a <span> when the text
+// contains other elements, otherwise each text piece would become its own flex column).
+.info,
+.error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 8px;
+
+  mat-icon {
+    flex: none;
+  }
+}
+
+.info {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+.error {
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+.full {
+  width: 100%;
+}
+
+// Wide tables scroll inside their card instead of making the whole page scroll sideways.
+.table-scroll {
+  overflow-x: auto;
+}
+
+// Admin page layout: centred column of cards with a gap.
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+// Source previews in tooltips: keep the line break between file name and passage start.
+.source-tooltip {
+  white-space: pre-line;
+  max-width: 360px !important;
+}
+
+// --- Admin pages: header, cards, muted text (shared by Evaluation and Settings) ---------------
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+
+  > div:first-child {
+    flex: 1 1 380px;
+  }
+
+  h1 {
+    margin: 0 0 4px;
+    font: var(--mat-sys-headline-small);
+  }
+}
+
+.lead {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.card {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+
+  h2 {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// Chat: the collection picker's menu (rendered in an overlay, so styled globally).
+.collection-menu {
+  min-width: 260px !important;
+
+  .menu-group {
+    padding: 8px 16px 4px;
+    font: var(--mat-sys-label-small);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .collection-option {
+    min-height: 52px;
+
+    .mat-mdc-menu-item-text {
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    &.selected {
+      background: var(--mat-sys-secondary-container);
+    }
+  }
+
+  .option-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    line-height: 1.25;
+  }
+
+  .option-name {
+    font: var(--mat-sys-body-large);
+  }
+
+  .option-meta {
+    font: var(--mat-sys-body-small);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .option-check {
+    display: inline-flex;
+    margin-left: 12px;
+
+    mat-icon {
+      margin: 0;
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+// Chat: the "N sources" popup of an answer (an overlay, so styled globally).
+.sources-menu {
+  --mat-menu-container-color: var(--mat-sys-surface-container-lowest);
+  --mat-menu-container-shape: 14px;
+  min-width: 320px !important;
+  max-width: min(440px, 92vw) !important;
+  border: 1px solid var(--mat-sys-outline-variant);
+
+  .menu-head {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 16px 8px;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  .menu-group {
+    font: var(--mat-sys-label-small);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .menu-hint {
+    font: var(--mat-sys-body-small);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .doc-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+
+    &:hover {
+      background: var(--mat-sys-surface-container-low);
+    }
+
+    mat-icon {
+      flex: none;
+      color: var(--mat-sys-primary);
+    }
+  }
+
+  .doc-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: var(--mat-sys-body-medium);
+  }
+
+  .doc-type {
+    font: var(--mat-sys-label-small);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .cite {
+    min-width: 24px;
+    padding: 1px 7px;
+    border: none;
+    border-radius: 999px;
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+    font: var(--mat-sys-label-medium);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
+      outline: none;
+    }
+  }
+
+  .menu-preview {
+    margin: 6px 12px 4px;
+    padding: 8px 10px;
+    min-height: 3.2em;
+    border-radius: 10px;
+    background: var(--mat-sys-surface-container-low);
+    font: var(--mat-sys-body-small);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}

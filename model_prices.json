@@ -1,0 +1,3 @@
+{
+  "_comment": "Optional: prices per 1M tokens for the Usage page's cost estimate. Fill in your provider's current prices, e.g. \"gemini-3.5-flash-lite\": {\"input_per_million\": 0.0, \"output_per_million\": 0.0}. Models not listed show no cost. Keys starting with _ are ignored."
+}

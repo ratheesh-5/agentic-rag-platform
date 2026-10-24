@@ -1,0 +1,241 @@
+<header class="page-head">
+  <div>
+    <h1>{{ keys.isAdmin() ? 'Documents' : 'My documents' }}</h1>
+    <p class="lead">
+      The knowledge the assistant answers from. Every upload is checked, split into passages and
+      indexed automatically — it can be used from the next question.
+    </p>
+  </div>
+</header>
+
+<!-- Collections: pick one; tiles, upload and list below belong to it -->
+<section class="collections" aria-label="Collections">
+  <mat-chip-listbox
+    aria-label="Collection"
+    [value]="current()?.id"
+    (change)="$event.value && collections.select($event.value)"
+  >
+    @for (k of managed(); track k.id) {
+      <mat-chip-option [value]="k.id" [matTooltip]="k.description">
+        <mat-icon matChipAvatar>{{ k.is_private ? 'lock' : 'folder' }}</mat-icon>
+        {{ k.name }} ({{ k.documents }})
+      </mat-chip-option>
+    }
+  </mat-chip-listbox>
+  <button mat-stroked-button (click)="editCollection()">
+    <mat-icon>create_new_folder</mat-icon> New collection
+  </button>
+  @if (current(); as k) {
+    <span class="spacer"></span>
+    <button mat-icon-button (click)="editCollection(k)" matTooltip="Rename" aria-label="Rename">
+      <mat-icon>edit</mat-icon>
+    </button>
+    @if (!k.is_default) {
+      <button
+        mat-icon-button
+        (click)="deleteCollection(k)"
+        matTooltip="Delete collection"
+        aria-label="Delete collection"
+      >
+        <mat-icon>delete_outline</mat-icon>
+      </button>
+    }
+  }
+</section>
+
+@if (!managed().length) {
+  <!-- First step: without a collection there is nowhere to upload to -->
+  <section class="card first-step">
+    <mat-icon class="first-icon">create_new_folder</mat-icon>
+    <div>
+      <h2>Create your first collection</h2>
+      <p class="muted">
+        A collection holds documents on one subject - for example "My resume" or "Loan papers". Only
+        you can see and search it. Then upload your documents into it.
+      </p>
+    </div>
+    <button mat-flat-button (click)="editCollection()">
+      <mat-icon>add</mat-icon> New collection
+    </button>
+  </section>
+}
+@if (privateTotals(); as t) {
+  @if (t.collections) {
+    <p class="muted small private-note">
+      <mat-icon inline>lock</mat-icon> Users' private collections: {{ t.collections }} ({{
+        t.documents
+      }}
+      documents, {{ t.users }} users) - their content isn't visible to admins.
+    </p>
+  }
+}
+@if (current(); as k) {
+  <p class="threshold-note" [matTooltip]="thresholdHelp(k.threshold_source)">
+    <mat-icon>tune</mat-icon> Similarity threshold {{ k.threshold.toFixed(2) }} ·
+    {{ thresholdLabel(k.threshold_source) }}
+  </p>
+}
+
+@if (current()) {
+  <!-- Summary tiles -->
+  <div class="tiles">
+    <div class="tile">
+      <mat-icon>folder_open</mat-icon>
+      <span class="t-value">{{ documents().length }}</span>
+      <span class="t-label">documents</span>
+    </div>
+    <div class="tile">
+      <mat-icon>view_agenda</mat-icon>
+      <span class="t-value">{{ totalChunks() }}</span>
+      <span
+        class="t-label"
+        matTooltip="Small pieces of the documents (the chunk size in Settings) that the search finds and answers cite"
+        >passages</span
+      >
+    </div>
+    <div class="tile">
+      <mat-icon>category</mat-icon>
+      <span class="t-value types">
+        @for (t of types(); track t.name) {
+          <span class="type-pill">{{ t.count }} {{ t.name }}</span>
+        } @empty {
+          –
+        }
+      </span>
+      <span class="t-label">file types</span>
+    </div>
+    <div class="tile">
+      <mat-icon>update</mat-icon>
+      <span class="t-value small-value">{{ (lastIndexed() | date: 'medium') ?? '–' }}</span>
+      <span class="t-label">last update</span>
+    </div>
+  </div>
+
+  <!-- Upload: drag and drop or browse -->
+  <section
+    class="drop"
+    [class.dragging]="dragging()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="dragging.set(false)"
+    (drop)="onDrop($event)"
+  >
+    <input
+      #picker
+      type="file"
+      hidden
+      multiple
+      [accept]="accept"
+      (change)="onFileSelected($event)"
+    />
+    <mat-icon class="drop-icon">cloud_upload</mat-icon>
+    <div class="drop-text">
+      <b>Drop files here</b> or
+      <button mat-flat-button (click)="picker.click()" [disabled]="busy()">
+        <mat-icon>upload_file</mat-icon> Browse
+      </button>
+    </div>
+    <span class="muted small">PDF · Word (.docx) · Markdown · text — several files at once</span>
+  </section>
+
+  @if (uploads().length) {
+    <section class="card queue">
+      @for (u of uploads(); track $index) {
+        <div class="q-row" [class]="'q-row ' + u.state">
+          <mat-icon>
+            {{
+              u.state === 'done'
+                ? 'check_circle'
+                : u.state === 'warning'
+                  ? 'warning'
+                  : u.state === 'failed'
+                    ? 'error'
+                    : u.state === 'uploading'
+                      ? 'sync'
+                      : 'schedule'
+            }}
+          </mat-icon>
+          <span class="q-name">{{ u.name }}</span>
+          <span class="q-detail">{{ u.detail || 'Waiting…' }}</span>
+        </div>
+      }
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+    </section>
+  }
+
+  @if (message()) {
+    <div class="info" role="status"><mat-icon>check_circle</mat-icon> {{ message() }}</div>
+  }
+  @if (error()) {
+    <div class="error" role="alert"><mat-icon>error</mat-icon> {{ error() }}</div>
+  }
+
+  <!-- Indexed documents -->
+  <section class="card">
+    <div class="list-head">
+      <h2>Indexed documents ({{ visible().length }})</h2>
+      <input
+        class="search"
+        type="search"
+        placeholder="Search documents…"
+        aria-label="Search documents"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+      />
+    </div>
+    @if (types().length > 1) {
+      <mat-chip-listbox
+        aria-label="File type"
+        [value]="type()"
+        (change)="type.set($event.value ?? 'all')"
+      >
+        <mat-chip-option value="all">All</mat-chip-option>
+        @for (t of types(); track t.name) {
+          <mat-chip-option [value]="t.name">{{ t.name }} ({{ t.count }})</mat-chip-option>
+        }
+      </mat-chip-listbox>
+    }
+
+    <div class="docs" [appShowRows]="8" rowSelector=".doc">
+      @for (d of visible(); track d.id) {
+        <div class="doc">
+          <mat-icon class="d-icon" [class]="'d-icon ' + d.doc_type">{{
+            icon(d.doc_type)
+          }}</mat-icon>
+          <div class="d-main">
+            <span class="d-name" [matTooltip]="d.path">{{ fileName(d) }}</span>
+            <span class="d-meta">
+              <span class="source" [class.uploaded]="source(d) === 'Uploaded'">{{
+                source(d)
+              }}</span>
+              @if (d.warnings.length) {
+                <span class="flag" [matTooltip]="warningText(d)" tabindex="0">
+                  <mat-icon>warning</mat-icon> Check content
+                </span>
+              }
+              {{ d.chunks }} passage{{ d.chunks === 1 ? '' : 's' }} · indexed
+              {{ d.ingested_at | date: 'short' }}
+            </span>
+          </div>
+          <button
+            mat-icon-button
+            (click)="remove(d)"
+            [attr.aria-label]="'Remove ' + d.path"
+            matTooltip="Remove from the index"
+          >
+            <mat-icon>delete_outline</mat-icon>
+          </button>
+        </div>
+      } @empty {
+        <p class="muted empty">
+          @if (documents().length) {
+            No documents match.
+          } @else {
+            No documents yet — upload one above to start.
+          }
+        </p>
+      }
+    </div>
+  </section>
+}

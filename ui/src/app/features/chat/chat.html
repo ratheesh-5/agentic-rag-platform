@@ -1,0 +1,434 @@
+<div class="thread" #thread>
+  <div class="column">
+    @if (notice()) {
+      <div class="info notice" role="status"><mat-icon>info</mat-icon> {{ notice() }}</div>
+    }
+    @if (messages().length && collections.list().length > 1) {
+      <!-- An open chat searches one collection: say which -->
+      <div class="in-collection"><mat-icon>folder</mat-icon> {{ collectionName() }}</div>
+    }
+    @if (!messages().length && !pending()) {
+      <!-- Empty conversation: welcome + starter questions -->
+      <div class="welcome">
+        <mat-icon class="logo">auto_awesome</mat-icon>
+        <h1>How can I help?</h1>
+        <p>
+          {{
+            profile()?.description ??
+              'I answer questions from the indexed documents and cite my sources.'
+          }}
+        </p>
+        @if (topicCards().length) {
+          <h2 class="topics-heading">What you can ask about</h2>
+          <div class="topics">
+            @for (t of topicCards(); track t.title) {
+              <div class="topic">
+                <div class="topic-title">{{ t.title }}</div>
+                <div class="topic-desc">{{ t.description }}</div>
+                @if (t.examples.length) {
+                  <button class="starter" (click)="send(t.examples[0])">
+                    {{ t.examples[0] }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+        <!-- Other uploaded documents: one compact chip each (click = overview question) -->
+        @if (otherDocs().length) {
+          <h2 class="topics-heading">More documents ({{ otherDocs().length }})</h2>
+          <div class="topic-chips doc-chips">
+            @for (t of visibleDocs(); track t.title) {
+              <button
+                class="chip"
+                (click)="send(t.examples[0])"
+                [disabled]="!t.examples.length"
+                [matTooltip]="'Ask: ' + (t.examples[0] ?? '')"
+              >
+                {{ t.title }}
+              </button>
+            }
+            @if (otherDocs().length > visibleDocs().length) {
+              <button class="chip more" (click)="showAllDocs.set(true)">
+                +{{ otherDocs().length - visibleDocs().length }} more
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    @for (m of messages(); track m.id; let i = $index) {
+      @if (newDay(i)) {
+        <div class="day-sep" role="separator">
+          <span>{{ dayLabel(m.created_at) }}</span>
+        </div>
+      }
+      @if (m.role === 'user') {
+        <div class="row user">
+          <div class="user-col">
+            <div class="bubble user-bubble" [class.failed]="failed().has(m.id)">
+              {{ m.content }}
+            </div>
+            @if (failed().get(m.id); as why) {
+              <!-- Not answered: the question stays where it was asked, with what to do next -->
+              <div class="send-error" role="alert">
+                <mat-icon>error_outline</mat-icon>
+                <span>{{ why }}</span>
+                <button mat-button (click)="retry(m)" [disabled]="pending()">
+                  <mat-icon>refresh</mat-icon> Retry
+                </button>
+                <button mat-button (click)="editFailed(m)">Edit</button>
+              </div>
+            } @else {
+              <span class="time" [matTooltip]="m.created_at | date: 'full'">{{
+                when(m.created_at)
+              }}</span>
+            }
+          </div>
+        </div>
+      } @else {
+        <div class="row assistant">
+          <div class="avatar"><mat-icon>auto_awesome</mat-icon></div>
+          <div class="body">
+            @if (m.answerable) {
+              <div class="bubble assistant-bubble">
+                @for (seg of segments(m); track $index) {
+                  @if (seg.cite; as s) {
+                    <button
+                      class="cite"
+                      [class.open]="openSource() === m.id + ':' + s.number"
+                      (click)="toggleSource(m, s)"
+                      [matTooltip]="preview(s)"
+                      matTooltipClass="source-tooltip"
+                      [attr.aria-label]="'Show source ' + label(m, s)"
+                    >
+                      {{ label(m, s) }}
+                    </button>
+                  } @else {
+                    {{ seg.text }}
+                  }
+                }
+              </div>
+              @if (m.sources?.length) {
+                @if (sourceText(m); as s) {
+                  <blockquote class="passage">
+                    <div class="passage-head">
+                      {{ label(m, s) }} · {{ docTitle(s.document) }} ({{ docType(s.document) }})
+                    </div>
+                    <div class="passage-text">{{ s.text }}</div>
+                  </blockquote>
+                }
+              }
+            } @else {
+              <div class="bubble assistant-bubble muted">
+                <p>I couldn't find this in the documents.</p>
+                @if (m.found_in?.length) {
+                  <!-- Nothing here, but another collection has matching documents -->
+                  <p class="found-in">
+                    Not in {{ collectionName() }}, but other collections have matching documents:
+                  </p>
+                  <div class="topic-chips">
+                    @for (k of m.found_in; track k.id) {
+                      <button
+                        class="chip found"
+                        (click)="askIn(k.id, questionBefore(m))"
+                        [disabled]="pending()"
+                      >
+                        <mat-icon>folder</mat-icon> Ask in {{ k.name }}
+                      </button>
+                    }
+                  </div>
+                }
+                @if (m.id === lastAnswerId() && profile()?.topics?.length) {
+                  <p>Try rephrasing, or pick a topic:</p>
+                  <div class="topic-chips">
+                    @for (t of visibleTopics(); track t.title) {
+                      <button
+                        class="chip"
+                        (click)="send(t.examples[0])"
+                        [disabled]="pending() || !t.examples.length"
+                        [matTooltip]="'Ask: ' + (t.examples[0] ?? '')"
+                      >
+                        {{ t.title }}
+                      </button>
+                    }
+                    @if (hiddenTopics() > 0) {
+                      <button class="chip more" (click)="showAllTopics.set(true)">
+                        +{{ hiddenTopics() }} more
+                      </button>
+                    }
+                  </div>
+                } @else {
+                  <p>Try rephrasing, or ask about something they cover.</p>
+                }
+              </div>
+            }
+
+            @if (
+              dev() &&
+              (m.standalone_question ||
+                m.steps?.length ||
+                m.route ||
+                !m.answerable ||
+                m.faithfulness != null ||
+                m.answer_relevancy != null)
+            ) {
+              <div class="dev-details" matTooltip="Development build only">
+                <mat-icon>code</mat-icon>
+                <div>
+                  @if (m.standalone_question) {
+                    <div>Understood as: “{{ m.standalone_question }}”</div>
+                  }
+                  @if (!m.answerable && m.abstain_reason) {
+                    <div>Abstain reason: {{ m.abstain_reason }}</div>
+                  }
+                  @if (m.route) {
+                    <div>Route: {{ m.route }}</div>
+                  }
+                  @if (m.steps?.length) {
+                    <div>Steps: {{ m.steps!.join(' → ') }}</div>
+                  }
+                  @if (m.faithfulness != null || m.answer_relevancy != null) {
+                    <div>
+                      Scored: faithfulness {{ m.faithfulness ?? '–' }} · relevance
+                      {{ m.answer_relevancy ?? '–' }}
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            @if (reading(m); as read) {
+              <div class="reading"><mat-icon>travel_explore</mat-icon> {{ read }}</div>
+            }
+
+            <div class="actions">
+              <span class="time" [matTooltip]="m.created_at | date: 'full'">
+                {{ when(m.created_at) }}
+                @if (m.seconds !== null && m.seconds !== undefined) {
+                  · answered in {{ m.seconds }} s
+                }
+              </span>
+              @if (m.answerable) {
+                <button
+                  mat-icon-button
+                  (click)="copy(m)"
+                  [matTooltip]="copiedId() === m.id ? 'Copied' : 'Copy'"
+                  aria-label="Copy answer"
+                >
+                  <mat-icon>{{ copiedId() === m.id ? 'check' : 'content_copy' }}</mat-icon>
+                </button>
+              }
+              <button
+                mat-icon-button
+                (click)="rate(m, 1)"
+                [class.chosen]="m.feedback === 1"
+                matTooltip="Helpful"
+                aria-label="Helpful"
+              >
+                <mat-icon>thumb_up</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                (click)="rate(m, -1)"
+                [class.chosen]="m.feedback === -1"
+                matTooltip="Not helpful"
+                aria-label="Not helpful"
+              >
+                <mat-icon>thumb_down</mat-icon>
+              </button>
+              @if (m.answerable && m.sources?.length) {
+                <!-- Sources as one compact button (opens on click or hover) instead of a row
+                     of chips: stays tidy however many documents an answer cites -->
+                <button
+                  class="sources-btn"
+                  [matMenuTriggerFor]="sourcesMenu"
+                  #sourcesTrigger="matMenuTrigger"
+                  (mouseenter)="sourcesTrigger.openMenu()"
+                  [attr.aria-label]="'Sources: ' + docsOf(m).length + ' documents'"
+                >
+                  <mat-icon>library_books</mat-icon>
+                  {{ docsOf(m).length }} source{{ docsOf(m).length === 1 ? '' : 's' }}
+                  <mat-icon>expand_more</mat-icon>
+                </button>
+                <mat-menu
+                  #sourcesMenu="matMenu"
+                  class="sources-menu"
+                  xPosition="before"
+                  (closed)="hovered.set(null)"
+                >
+                  <div class="menu-head">
+                    <span class="menu-group">Sources</span>
+                    <span class="menu-hint"
+                      >Numbers match the [n] in the answer · click one to read that passage</span
+                    >
+                  </div>
+                  @for (d of docsOf(m); track d.document) {
+                    <div class="doc-row">
+                      <mat-icon>{{ docIcon(d.document) }}</mat-icon>
+                      <span class="doc-name">{{ docTitle(d.document) }}</span>
+                      <span class="doc-type">{{ docType(d.document) }}</span>
+                      @for (s of d.sources; track s.number) {
+                        <button
+                          class="cite"
+                          (click)="toggleSource(m, s)"
+                          (mouseenter)="hovered.set(s)"
+                          (focus)="hovered.set(s)"
+                          [attr.aria-label]="
+                            'Read passage ' + label(m, s) + ' of ' + docTitle(d.document)
+                          "
+                        >
+                          {{ label(m, s) }}
+                        </button>
+                      }
+                    </div>
+                  }
+                  <!-- Preview inside the popup (no tooltip covering the answer) -->
+                  <div class="menu-preview">
+                    @if (hovered(); as s) {
+                      <b>[{{ label(m, s) }}] {{ docTitle(s.document) }}:</b> {{ excerpt(s) }}
+                    } @else {
+                      Point at a number to preview its passage.
+                    }
+                  </div>
+                </mat-menu>
+              }
+            </div>
+            @if (m.id === lastAnswerId() && related().length) {
+              <div class="related">
+                <span class="sources-label">Related</span>
+                @for (q of related(); track q) {
+                  <button class="chip" (click)="send(q)" [disabled]="pending()">{{ q }}</button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+    }
+
+    @if (pending()) {
+      <div class="row assistant">
+        <div class="avatar"><mat-icon>auto_awesome</mat-icon></div>
+        <div class="waiting">
+          <div class="bubble assistant-bubble typing" aria-label="Assistant is typing">
+            <span></span><span></span><span></span>
+          </div>
+          @if (waited() >= 3) {
+            <span class="time"
+              >{{ analysing() ? 'Reading every document…' : 'Thinking…' }} {{ waited() }} s</span
+            >
+          }
+          @if (waited() >= (analysing() ? 90 : 20)) {
+            <span class="time slow"
+              >The AI service is slow right now. Your answer is still on its way.</span
+            >
+          }
+        </div>
+      </div>
+    }
+
+    @if (error()) {
+      <div class="error" role="alert"><mat-icon>error</mat-icon> {{ error() }}</div>
+    }
+  </div>
+</div>
+
+<div class="composer">
+  <div class="column">
+    <div class="composer-tools">
+      @if (!messages().length && !pending() && collections.list().length > 1) {
+        <!-- A new chat searches one collection: always visible right where the question goes -->
+        <div class="search-in">
+          <span class="search-in-label">Searching in</span>
+          <button
+            class="collection-pill"
+            [matMenuTriggerFor]="collectionMenu"
+            aria-label="Collection to search"
+          >
+            <mat-icon>{{ collections.selected()?.is_private ? 'lock' : 'folder' }}</mat-icon>
+            <span class="pill-name">{{ collections.selected()?.name }}</span>
+            <mat-icon class="pill-arrow">expand_more</mat-icon>
+          </button>
+        </div>
+        <mat-menu #collectionMenu="matMenu" class="collection-menu" yPosition="above">
+          @if (mine().length) {
+            <div class="menu-group">My collections</div>
+            @for (k of mine(); track k.id) {
+              <ng-container
+                *ngTemplateOutlet="option; context: { $implicit: k, icon: 'lock' }"
+              ></ng-container>
+            }
+            <div class="menu-group">Shared</div>
+          }
+          @for (k of mine().length ? shared() : collections.list(); track k.id) {
+            <ng-container
+              *ngTemplateOutlet="option; context: { $implicit: k, icon: 'folder' }"
+            ></ng-container>
+          }
+        </mat-menu>
+        <ng-template #option let-k let-icon="icon">
+          <button
+            mat-menu-item
+            class="collection-option"
+            [class.selected]="k.id === collections.selectedId()"
+            (click)="collections.select(k.id)"
+          >
+            <mat-icon>{{ icon }}</mat-icon>
+            <span class="option-text">
+              <span class="option-name">{{ k.name }}</span>
+              <span class="option-meta"
+                >{{ k.documents }} document{{ k.documents === 1 ? '' : 's' }}</span
+              >
+            </span>
+            @if (k.id === collections.selectedId()) {
+              <!-- wrapped: the menu moves direct <mat-icon> children to the front -->
+              <span class="option-check"><mat-icon>check</mat-icon></span>
+            }
+          </button>
+        </ng-template>
+      }
+      @if (canAnalyse()) {
+        <button
+          class="collection-pill analyse-chip"
+          [class.on]="analyse()"
+          [attr.aria-pressed]="analyse()"
+          (click)="analyse.set(!analyse())"
+          [disabled]="pending()"
+          matTooltip="Read every document of this collection (up to 10) for one answer - for comparisons and overviews. Slower; counts as 5 questions."
+        >
+          <mat-icon>{{ analyse() ? 'check' : 'travel_explore' }}</mat-icon>
+          Analyse all documents
+        </button>
+      }
+    </div>
+    <div class="input-box">
+      <textarea
+        rows="1"
+        placeholder="Ask a question…"
+        aria-label="Message"
+        [ngModel]="draft()"
+        (ngModelChange)="draft.set($event)"
+        (keydown)="onKeydown($event)"
+        [disabled]="pending()"
+        cdkTextareaAutosize
+      ></textarea>
+      <button
+        mat-icon-button
+        class="send"
+        (click)="send()"
+        [disabled]="pending() || !draft().trim()"
+        aria-label="Send"
+      >
+        <mat-icon>arrow_upward</mat-icon>
+      </button>
+    </div>
+    <div class="disclaimer">
+      Answers come from the indexed documents and can be wrong. Check the sources.
+      @if (profile()?.chat_retention_days; as days) {
+        Chats are deleted after {{ days }} days without activity.
+      }
+    </div>
+  </div>
+</div>

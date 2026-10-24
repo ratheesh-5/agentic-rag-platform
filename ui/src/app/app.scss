@@ -1,0 +1,226 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.shell {
+  height: 100%;
+}
+
+// --- Sidebar ---------------------------------------------------------------------------------
+
+.sidenav {
+  width: 268px;
+  display: flex;
+  flex-direction: column;
+  background: var(--mat-sys-surface-container-low);
+  border-right: 1px solid var(--mat-sys-outline-variant);
+}
+
+// mat-sidenav wraps its content in an inner container; make that a full-height column.
+.sidenav ::ng-deep .mat-drawer-inner-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.side-top {
+  padding: 16px 12px 8px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--mat-sys-title-medium);
+  color: var(--mat-sys-primary);
+  margin: 4px 4px 16px;
+}
+
+.new-chat {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.side-label {
+  padding: 12px 16px 4px;
+  font: var(--mat-sys-label-small);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// "Recent" label with the small "delete all" button on the right.
+.recent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+  padding-bottom: 0;
+}
+
+.delete-all {
+  transform: scale(0.8);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.conversations {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px;
+}
+
+.conversation,
+.admin-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 4px 0 12px;
+  border-radius: 10px;
+  color: var(--mat-sys-on-surface);
+  text-decoration: none;
+  font: var(--mat-sys-body-medium);
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  &.active {
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+  }
+}
+
+.conversation-title {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+// Title + (with chats from 2+ collections) the chat's collection under it.
+.side-hint {
+  margin: 8px 16px 12px;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.conversation-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.conversation-collection {
+  font: var(--mat-sys-label-small);
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Delete button appears on hover (always visible on touch screens).
+.conversation-delete {
+  transform: scale(0.8);
+  opacity: 0;
+}
+
+.conversation:hover .conversation-delete,
+.conversation.active .conversation-delete {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .conversation-delete {
+    opacity: 1;
+  }
+}
+
+.empty {
+  padding: 8px 12px;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.side-bottom {
+  padding: 4px 8px 12px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  .admin-link {
+    padding: 0 12px;
+  }
+}
+
+// --- Main area ---------------------------------------------------------------------------------
+
+.main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.toolbar {
+  flex: none;
+  gap: 8px;
+  height: auto;
+  min-height: 56px;
+  flex-wrap: wrap;
+  padding-block: 6px;
+  background: var(--mat-sys-surface);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.toolbar-brand {
+  font: var(--mat-sys-title-medium);
+  color: var(--mat-sys-primary);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.admin-badge {
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-primary);
+}
+
+// Signed in with Google: round profile photo (or the name's first letter) opens the menu.
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+
+  &.initial {
+    display: grid;
+    place-items: center;
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+    font: var(--mat-sys-title-small);
+    text-transform: uppercase;
+  }
+}
+
+.account-info {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 16px;
+  font: var(--mat-sys-body-medium);
+
+  span {
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-body-small);
+  }
+}
+
+// The routed page fills the remaining height (the chat manages its own scrolling).
+.outlet {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+
+  > :not(router-outlet) {
+    height: 100%;
+  }
+}
