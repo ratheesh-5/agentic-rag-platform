@@ -18,7 +18,13 @@ data/index/
 data/uploads/
 data/*.db
 
+# Local-only: assistant settings, the Ollama test setup, the owner's test documents
+.claude/
+local/
+data/demo_hr/
+
 # Editor / OS
+~$*
 .vscode/
 .idea/
 .DS_Store
