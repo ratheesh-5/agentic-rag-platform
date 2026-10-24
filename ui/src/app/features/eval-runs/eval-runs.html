@@ -1,0 +1,266 @@
+<header class="page-head">
+  <div>
+    <h1>Evaluation</h1>
+    <p class="lead">
+      Is the assistant good enough? <b>Live quality</b> watches real chats; <b>Test-set checks</b>
+      measure search against questions with known answers before and after a settings change.
+    </p>
+  </div>
+</header>
+
+<mat-tab-group animationDuration="0ms" mat-stretch-tabs="false">
+  <mat-tab label="Live quality">
+    <ng-template matTabContent><app-live-quality /></ng-template>
+  </mat-tab>
+  <mat-tab label="Test-set checks">
+    <div class="tab-body">
+      <div class="tab-actions">
+        <p class="lead">
+          Each check searches with test questions whose answers are known (search only: no AI
+          answers, free, about a second) and compares Recall and MRR with the release gates.
+          <b>Run quality check</b> uses the built-in test set; <b>Use my test set</b> takes your own
+          questions for your documents.
+        </p>
+        <div class="head-actions">
+          <button mat-flat-button (click)="runCheck()" [disabled]="running()">
+            <mat-icon>play_arrow</mat-icon> Run quality check
+          </button>
+          <button
+            mat-stroked-button
+            (click)="file.click()"
+            [disabled]="running()"
+            matTooltip="Run the check with your own questions (.jsonl)"
+          >
+            <mat-icon>upload_file</mat-icon> Use my test set
+          </button>
+          <input #file type="file" accept=".jsonl" hidden (change)="onFile($event)" />
+        </div>
+      </div>
+
+      @if (running()) {
+        <div class="running">
+          <mat-progress-bar mode="indeterminate" />
+          <span>Running the quality check… (search only, no model calls)</span>
+        </div>
+      }
+      @if (error()) {
+        <div class="error" role="alert"><mat-icon>error</mat-icon> {{ error() }}</div>
+      }
+      @if (notice()) {
+        <div class="info" role="status"><mat-icon>task_alt</mat-icon> {{ notice() }}</div>
+      }
+
+      <!-- Headline: the newest run with the active configuration -->
+      @if (latest(); as run) {
+        <section class="hero" [class]="'hero status-' + run.gates">
+          <div class="hero-status">
+            <mat-icon class="hero-icon">{{ statusIcon(run.gates) }}</mat-icon>
+            <div>
+              <div class="hero-title">{{ headlineText(run.gates) }}</div>
+              <div class="hero-sub">
+                Active configuration · {{ kindLabel[run.kind] }} #{{ run.id }} ·
+                {{ run.created_at | date: 'medium' }} · {{ run.metrics['n_questions'] }} questions
+                @if (run.test_set) {
+                  from {{ run.test_set }}
+                }
+              </div>
+            </div>
+          </div>
+          <div class="kpis">
+            @for (key of kpis; track key) {
+              @let g = gate(headline(), key);
+              <div class="kpi" [class]="'kpi gate-' + (g?.status ?? 'n/a')">
+                <div class="kpi-label" [matTooltip]="metricInfo[key].help">
+                  {{ metricInfo[key].label }}
+                </div>
+                <div class="kpi-value">{{ g?.status === 'n/a' ? '—' : fmt(run.metrics[key]) }}</div>
+                <div class="kpi-gate">
+                  @if (g && g.status !== 'n/a') {
+                    <mat-icon inline>{{ statusIcon(g.status) }}</mat-icon>
+                    gate {{ g.op === '>=' ? '≥' : '≤' }} {{ g.threshold }}
+                  } @else {
+                    needs a full evaluation
+                  }
+                </div>
+                <div class="kpi-help">{{ metricInfo[key].help }}</div>
+              </div>
+            }
+          </div>
+        </section>
+      } @else if (runs().length) {
+        <div class="info">
+          <mat-icon>info</mat-icon> No run uses the active configuration yet. Click
+          <b>&nbsp;Run quality check&nbsp;</b> to measure it.
+        </div>
+      }
+
+      <!-- All runs -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Runs</h2>
+          <mat-chip-listbox
+            aria-label="Run type"
+            [value]="filter()"
+            (change)="filter.set($event.value ?? 'all')"
+          >
+            @for (f of filters; track f.value) {
+              <mat-chip-option [value]="f.value">{{ f.label }}</mat-chip-option>
+            }
+          </mat-chip-listbox>
+          <span class="spacer"></span>
+          @if (hiddenCount()) {
+            <mat-slide-toggle [checked]="showHidden()" (change)="showHidden.set($event.checked)">
+              Show hidden ({{ hiddenCount() }})
+            </mat-slide-toggle>
+          }
+        </div>
+
+        <div class="table-scroll">
+          <table class="runs">
+            <thead>
+              <tr>
+                <th>Run</th>
+                <th>Type</th>
+                <th class="num" [matTooltip]="metricInfo['recall_at_k'].help">Recall@5</th>
+                <th class="num" [matTooltip]="metricInfo['mrr'].help">MRR</th>
+                <th>Gates</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of visible(); track r.id) {
+                <tr
+                  (click)="open(r)"
+                  [class.selected]="selected()?.id === r.id"
+                  [class.is-hidden]="r.hidden"
+                >
+                  <td>
+                    <div class="run-name">
+                      #{{ r.id }} {{ r.label }}
+                      @if (r.current) {
+                        <span class="badge current" matTooltip="Uses the active configuration"
+                          >current config</span
+                        >
+                      }
+                    </div>
+                    <div class="run-meta">
+                      {{ r.created_at | date: 'short' }} · {{ r.metrics['n_questions'] }} questions
+                      @if (r.test_set) {
+                        · {{ r.test_set }}
+                      }
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge kind" [class]="'badge kind ' + r.kind">{{
+                      kindLabel[r.kind]
+                    }}</span>
+                  </td>
+                  <td class="num">{{ fmt(r.metrics['recall_at_k']) }}</td>
+                  <td class="num">{{ fmt(r.metrics['mrr']) }}</td>
+                  <td>
+                    <span class="gate-pill" [class]="'gate-pill gate-' + r.gates">
+                      <mat-icon inline>{{ statusIcon(r.gates) }}</mat-icon> {{ r.gates }}
+                    </span>
+                  </td>
+                  <td class="actions">
+                    <button
+                      mat-icon-button
+                      (click)="toggleHidden(r, $event)"
+                      [matTooltip]="r.hidden ? 'Show in the list' : 'Hide from the list'"
+                      [attr.aria-label]="r.hidden ? 'Show run' : 'Hide run'"
+                    >
+                      <mat-icon>{{ r.hidden ? 'visibility' : 'visibility_off' }}</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+                @if (selected()?.id === r.id) {
+                  <tr class="detail-row">
+                    <td colspan="6">
+                      @if (selected(); as d) {
+                        <div class="detail">
+                          <div>
+                            <h3>Release gates</h3>
+                            <ul class="gates">
+                              @for (g of d.gates; track g.metric) {
+                                <li [class]="'gate-' + g.status">
+                                  <mat-icon inline>{{ statusIcon(g.status) }}</mat-icon>
+                                  <span class="g-label">{{ g.label }}</span>
+                                  <span class="g-value">
+                                    @if (g.status === 'n/a') {
+                                      not measured
+                                    } @else {
+                                      {{ fmt(g.value) }} {{ g.op === '>=' ? '≥' : '≤' }}
+                                      {{ g.threshold }}
+                                    }
+                                  </span>
+                                </li>
+                              }
+                            </ul>
+                          </div>
+                          <div>
+                            <h3>Metrics</h3>
+                            <dl class="metrics">
+                              @for (key of metricsFor(d); track key) {
+                                @if (d.metrics[key] !== null && d.metrics[key] !== undefined) {
+                                  <dt [matTooltip]="metricInfo[key].help">
+                                    {{ metricInfo[key].label }}
+                                  </dt>
+                                  <dd>{{ fmt(d.metrics[key]) }}</dd>
+                                }
+                              }
+                            </dl>
+                          </div>
+                          <div>
+                            <h3>Settings used</h3>
+                            <dl class="metrics">
+                              @for (s of settingsUsed(d); track s.label) {
+                                <dt>{{ s.label }}</dt>
+                                <dd>{{ s.value }}</dd>
+                              }
+                            </dl>
+                          </div>
+                        </div>
+                        @let misses = missed(d);
+                        <h3>Questions to look at ({{ misses.length }})</h3>
+                        @if (misses.length) {
+                          <ul class="misses">
+                            @for (m of misses; track m.question) {
+                              <li>
+                                {{ m.question }} <span class="miss-where">{{ m.where }}</span>
+                              </li>
+                            }
+                          </ul>
+                        } @else {
+                          <p class="muted">Every answer passage was ranked first.</p>
+                        }
+                      }
+                    </td>
+                  </tr>
+                }
+              } @empty {
+                <tr>
+                  <td colspan="6" class="muted">No runs here yet.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <mat-expansion-panel class="format">
+        <mat-expansion-panel-header>
+          <mat-panel-title><mat-icon>help_outline</mat-icon>&nbsp;Test set format</mat-panel-title>
+        </mat-expansion-panel-header>
+        <p>
+          A <code>.jsonl</code> file with one question per line. Answerable questions name the
+          document and an exact quote that contains the answer (it must appear exactly once).
+          Include some questions the documents cannot answer (<code>"answerable": false</code>).
+          Document paths are shown on the Documents page.
+        </p>
+        <pre>{{
+          '{"id": "q1", "question": "How many days of annual leave?", "answerable": true, "reference_answer": "Twenty days.", "evidence": [{"doc": "data/uploads/hr_policy.md", "quote": "twenty days of annual leave"}]}\n{"id": "q2", "question": "What is the CEO\'s salary?", "answerable": false, "reference_answer": "", "evidence": []}'
+        }}</pre>
+      </mat-expansion-panel>
+    </div>
+  </mat-tab>
+</mat-tab-group>

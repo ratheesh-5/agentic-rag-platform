@@ -1,0 +1,70 @@
+# The whole platform with one command (Phase 7):
+#   docker compose up --build        UI: http://localhost:8080   API: http://localhost:8000/docs
+#   UI_PORT=8081 docker compose up   (if 8080 is taken by another app)
+#
+# The UI calls the API through nginx (http://localhost:8080/api/...), so no CORS is needed and a
+# local `rag serve` on port 8000 doesn't interfere.
+#
+# Security (plan B4/B5): both containers run as normal users with no extra Linux privileges;
+# the API port is published on this machine only (127.0.0.1) for /docs and tools - other
+# computers reach the API only through nginx; the API trusts X-Forwarded-For only from the
+# nginx container, so nobody can fake their IP to dodge the guest question limit.
+#
+# Local only - no cloud. The same images can later run on any container platform.
+# Secrets come from your .env (env_file); they are never copied into an image.
+
+services:
+  api:
+    build: .
+    env_file: .env
+    environment:
+      # Only the nginx container (fixed address below) may tell the API the browser's real IP.
+      # Requests from anywhere else (e.g. curl on port 8000) are counted by their own address.
+      FORWARDED_ALLOW_IPS: "10.250.80.10"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      # Index + database and uploaded documents survive container restarts (bind mounts:
+      # the same folders the CLI uses, so `rag ingest` on the host fills the container's index).
+      - ./data/index:/app/data/index
+      - ./data/uploads:/app/data/uploads
+      # Writable: applying an optimizer recommendation in the UI updates this file.
+      - ./rag_config.json:/app/rag_config.json
+    networks: [rag]
+    security_opt: ["no-new-privileges:true"]  # no privilege escalation (e.g. setuid binaries)
+    cap_drop: [ALL]                           # no special Linux capabilities needed
+    restart: unless-stopped
+    # Health check (plan D2): `docker ps` shows healthy / unhealthy instead of just "Up".
+    # /ready checks config, database and search index (no AI call, so no quota is used).
+    # Python's urllib instead of curl: the slim image has no curl; a 503 raises -> exit 1.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s  # first start: loading the index; failures here don't count
+
+  ui:
+    build: ./ui
+    ports:
+      - "${UI_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy  # start nginx only once the API can answer
+    networks:
+      rag:
+        ipv4_address: 10.250.80.10  # fixed, so the API can trust exactly this proxy
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    restart: unless-stopped
+    healthcheck:  # nginx serves the app (busybox wget is in the alpine image)
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  rag:
+    ipam:
+      config:
+        - subnet: 10.250.80.0/24

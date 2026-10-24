@@ -1,0 +1,412 @@
+@if (error()) {
+  <div class="error" role="alert"><mat-icon>error</mat-icon> {{ error() }}</div>
+}
+
+<!-- Reusable 0..1 score bar -->
+<ng-template #meter let-label="label" let-value="value">
+  <div [class]="'meter-row ' + level(value)">
+    <span class="meter-label">{{ label }}</span>
+    <span class="meter"><span class="fill" [style.width.%]="width(value)"></span></span>
+    <span class="meter-value">{{ value === null || value === undefined ? '–' : fmt(value) }}</span>
+  </div>
+</ng-template>
+
+@if (usage(); as u) {
+  <div class="bar">
+    <p class="lead">
+      Measured from real chats, no test data needed. Scored automatically in the background:
+      <b>{{ sampleText(u.sample_rate) }}</b
+      >, for <b>faithfulness</b> (every claim supported by the passages) and
+      <b>relevance</b> (answers the question).
+    </p>
+    <div class="bar-actions">
+      <mat-slide-toggle
+        [checked]="includeAdmin()"
+        (change)="includeAdmin.set($event.checked)"
+        matTooltip="Chats asked while signed in as admin (team testing) are hidden by default"
+      >
+        Include admin chats ({{ u.admin_chats }})
+      </mat-slide-toggle>
+      <button mat-stroked-button (click)="load()"><mat-icon>refresh</mat-icon> Refresh</button>
+    </div>
+  </div>
+
+  <!-- KPI tiles: click to filter the answers list -->
+  <div class="kpis">
+    <button class="kpi" [class.active]="filter() === 'all'" (click)="show('all')">
+      <span class="kpi-label"><mat-icon>forum</mat-icon> Questions asked</span>
+      <span class="kpi-value">{{ u.totals.questions }}</span>
+      <span class="kpi-help"
+        >{{ u.totals.answered }} answered
+        @if (u.totals.escalated) {
+          · {{ u.totals.escalated }} escalated to agentic
+        }
+        · click to see all</span
+      >
+    </button>
+    <button
+      class="kpi"
+      [class.active]="filter() === 'unanswered'"
+      [class.weak]="u.totals.questions > 0 && u.totals.unanswered / u.totals.questions > 0.3"
+      (click)="show('unanswered')"
+    >
+      <span class="kpi-label"><mat-icon>help_outline</mat-icon> Not answered</span>
+      <span class="kpi-value">
+        {{ u.totals.questions ? (u.totals.unanswered / u.totals.questions | percent) : '–' }}
+      </span>
+      <span class="kpi-help">{{ u.totals.unanswered }} not in the documents</span>
+    </button>
+    <button
+      [class]="'kpi ' + level(u.totals.faithfulness)"
+      [class.active]="filter() === 'scored'"
+      (click)="show('scored')"
+    >
+      <span class="kpi-label"><mat-icon>verified</mat-icon> Faithfulness</span>
+      <span class="kpi-value">{{ fmt(u.totals.faithfulness) }}</span>
+      <span class="kpi-help">Claims supported by the passages · {{ u.totals.scored }} scored</span>
+    </button>
+    <button
+      [class]="'kpi ' + level(u.totals.answer_relevancy)"
+      [class.active]="filter() === 'low'"
+      (click)="show('low')"
+    >
+      <span class="kpi-label"><mat-icon>track_changes</mat-icon> Answer relevance</span>
+      <span class="kpi-value">{{ fmt(u.totals.answer_relevancy) }}</span>
+      <span class="kpi-help">{{ count('low') }} low-scored · click to review</span>
+    </button>
+    <button class="kpi" [class.active]="filter() === 'disliked'" (click)="show('disliked')">
+      <span class="kpi-label"><mat-icon>thumbs_up_down</mat-icon> Feedback</span>
+      <span class="kpi-value feedback">
+        <mat-icon>thumb_up</mat-icon>{{ u.totals.thumbs_up }} <mat-icon>thumb_down</mat-icon
+        >{{ u.totals.thumbs_down }}
+      </span>
+      <span class="kpi-help">Click to see disliked answers</span>
+    </button>
+  </div>
+}
+
+<div class="duo">
+  <!-- Test a question (playground) -->
+  <section class="card test">
+    <div class="s-head">
+      <mat-icon class="s-icon test-icon">science</mat-icon>
+      <h3>Test a question</h3>
+      <span class="hint">≈ 5 model calls · always scored · not saved</span>
+    </div>
+    <div class="test-input">
+      <input
+        type="text"
+        placeholder="Ask anything about the documents…"
+        aria-label="Test question"
+        [ngModel]="testQuestion()"
+        (ngModelChange)="testQuestion.set($event)"
+        (keydown.enter)="runTest()"
+        [disabled]="testing()"
+      />
+      <button
+        mat-flat-button
+        (click)="runTest()"
+        [disabled]="testing() || testQuestion().trim().length < 2"
+      >
+        <mat-icon>play_arrow</mat-icon> Run
+      </button>
+    </div>
+    @if (examples().length) {
+      <div class="examples">
+        <span class="muted small">Try:</span>
+        @for (q of examples(); track q) {
+          <button class="example" (click)="runTest(q)" [disabled]="testing()">{{ q }}</button>
+        }
+      </div>
+    }
+    @if (testing()) {
+      <mat-progress-bar mode="indeterminate" />
+      <p class="muted small">Answering and scoring… (a few seconds on the free tier)</p>
+    }
+    @if (testError()) {
+      <div class="error" role="alert"><mat-icon>error</mat-icon> {{ testError() }}</div>
+    }
+    @if (testResult(); as r) {
+      <div class="result">
+        <div class="verdict" [class.no]="!r.answerable">
+          <mat-icon>{{ r.answerable ? 'check_circle' : 'block' }}</mat-icon>
+          {{ r.answerable ? 'Answered from the documents' : 'Not in the documents' }}
+          <span class="muted small">· {{ r.seconds }} s · {{ r.judge_calls }} judge calls</span>
+        </div>
+        <div class="result-grid">
+          <div>
+            @if (r.answerable) {
+              <div class="scores">
+                <ng-container
+                  *ngTemplateOutlet="
+                    meter;
+                    context: { label: 'Faithfulness', value: r.faithfulness }
+                  "
+                />
+                <ng-container
+                  *ngTemplateOutlet="
+                    meter;
+                    context: { label: 'Relevance', value: r.answer_relevancy }
+                  "
+                />
+              </div>
+              @if (r.score_error) {
+                <p class="muted small">Scoring failed: {{ r.score_error }}</p>
+              }
+              <div class="answer-text">{{ r.answer }}</div>
+            } @else {
+              <p class="muted">Reason: {{ r.abstain_reason }}</p>
+            }
+          </div>
+          <div>
+            @if (r.passages.length) {
+              <h4>Passages the search found</h4>
+              @for (p of r.passages; track $index) {
+                <button
+                  class="passage"
+                  (click)="openPassage.set(openPassage() === $index ? null : $index)"
+                >
+                  <span class="p-doc">
+                    @if (p.cited) {
+                      <span class="cited">cited</span>
+                    }
+                    {{ p.document.split('/').pop() }}
+                  </span>
+                  <span class="meter"
+                    ><span class="fill" [style.width.%]="width(p.score)"></span
+                  ></span>
+                  <span class="p-score">{{ fmt(p.score) }}</span>
+                </button>
+                @if (openPassage() === $index) {
+                  <blockquote>{{ p.text }}</blockquote>
+                }
+              }
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </section>
+  @if (usage(); as u) {
+    @if (u.totals.questions) {
+      <section class="card suggest">
+        <div class="s-head">
+          <mat-icon class="s-icon missing">tips_and_updates</mat-icon>
+          <h3>Suggestions</h3>
+        </div>
+        <mat-chip-listbox
+          aria-label="Suggestion type"
+          [value]="tip()"
+          (change)="tip.set($event.value ?? 'unanswered')"
+        >
+          <mat-chip-option value="unanswered"
+            >Not answered ({{ u.unanswered.length }})</mat-chip-option
+          >
+          <mat-chip-option value="disliked">Disliked ({{ u.thumbs_down.length }})</mat-chip-option>
+          <mat-chip-option value="low">Low score ({{ u.low_scores.length }})</mat-chip-option>
+        </mat-chip-listbox>
+        <p class="muted small hint-line">
+          @switch (tip()) {
+            @case ('unanswered') {
+              Questions the documents couldn't answer. Frequent ones point to a missing document.
+            }
+            @case ('disliked') {
+              Answers users rated 👎. Check the cited document: outdated, unclear or incomplete?
+            }
+            @default {
+              Faithfulness or relevance below 0.7 in the automatic scoring.
+            }
+          }
+        </p>
+        <div class="scroll-list" [appShowRows]="5" rowSelector=".item">
+          @switch (tip()) {
+            @case ('unanswered') {
+              @for (q of u.unanswered; track q.question) {
+                <div class="item">
+                  <div class="q">
+                    {{ q.question }}
+                    @if (q.count > 1) {
+                      <span class="count" matTooltip="Times asked">×{{ q.count }}</span>
+                    }
+                  </div>
+                  <div class="meta">
+                    {{ q.last_asked | date: 'short' }}
+                    @if (q.understood_as) {
+                      · understood as “{{ q.understood_as }}”
+                    }
+                  </div>
+                </div>
+              } @empty {
+                <p class="muted">None so far.</p>
+              }
+            }
+            @case ('disliked') {
+              @for (a of u.thumbs_down; track a.message_id) {
+                <div class="item">
+                  <div class="q">{{ a.question }}</div>
+                  <div class="answer">{{ a.answer }}</div>
+                  <div class="meta">{{ a.documents.join(', ') || 'no document' }}</div>
+                </div>
+              } @empty {
+                <p class="muted">None so far.</p>
+              }
+            }
+            @default {
+              @for (a of u.low_scores; track a.message_id) {
+                <div class="item">
+                  <div class="q">{{ a.question }}</div>
+                  <ng-container
+                    *ngTemplateOutlet="
+                      meter;
+                      context: { label: 'Faithfulness', value: a.faithfulness }
+                    "
+                  />
+                  <ng-container
+                    *ngTemplateOutlet="
+                      meter;
+                      context: { label: 'Relevance', value: a.answer_relevancy }
+                    "
+                  />
+                  <div class="meta">{{ a.documents.join(', ') }}</div>
+                </div>
+              } @empty {
+                <p class="muted">None so far.</p>
+              }
+            }
+          }
+        </div>
+      </section>
+    }
+  }
+</div>
+
+@if (usage(); as u) {
+  @if (!u.totals.questions) {
+    <div class="info">
+      <mat-icon>chat</mat-icon>
+      <span
+        >No questions from users yet. Numbers and suggestions appear here as people use the chat.
+        @if (u.admin_chats) {
+          Switch on "Include admin chats" to see your own {{ u.admin_chats }}.
+        }
+      </span>
+    </div>
+  } @else {
+    <!-- Every answer, filterable -->
+    <section class="card" #answersList>
+      <div class="s-head">
+        <mat-icon class="s-icon">list_alt</mat-icon>
+        <h3>Answers ({{ answers().length }})</h3>
+        <input
+          class="search"
+          type="search"
+          placeholder="Search questions…"
+          aria-label="Search questions"
+          [ngModel]="search()"
+          (ngModelChange)="search.set($event)"
+        />
+      </div>
+      <mat-chip-listbox
+        aria-label="Filter answers"
+        [value]="filter()"
+        (change)="filter.set($event.value ?? 'all')"
+      >
+        @for (f of filters; track f.value) {
+          <mat-chip-option [value]="f.value">{{ f.label }} ({{ count(f.value) }})</mat-chip-option>
+        }
+      </mat-chip-listbox>
+
+      <p class="muted small hint-line">
+        Newest first · scroll for more · click a row to read the answer
+      </p>
+      <div class="rows" [appShowRows]="5" rowSelector=".row">
+        @for (a of answers(); track a.message_id) {
+          <button
+            class="row"
+            [class.open]="expanded() === a.message_id"
+            (click)="toggle(a.message_id)"
+          >
+            <span class="r-main">
+              <span class="r-q">{{ a.question }}</span>
+              <span class="r-meta">
+                {{ a.created_at | date: 'short' }}
+                @if (a.documents.length) {
+                  · {{ a.documents.join(', ') }}
+                }
+                @if (a.by_admin) {
+                  <span class="badge">admin</span>
+                }
+              </span>
+            </span>
+            <span class="r-status" [class.no]="!a.answerable">
+              {{ a.answerable ? 'Answered' : 'Not found' }}
+            </span>
+            <span class="r-scores">
+              @if (a.faithfulness !== null || a.answer_relevancy !== null) {
+                <ng-container
+                  *ngTemplateOutlet="meter; context: { label: 'Faith.', value: a.faithfulness }"
+                />
+                <ng-container
+                  *ngTemplateOutlet="meter; context: { label: 'Relev.', value: a.answer_relevancy }"
+                />
+              } @else {
+                <span class="muted small">{{ a.answerable ? 'not sampled' : '' }}</span>
+              }
+            </span>
+            <span class="r-feedback">
+              @if (a.feedback === 1) {
+                <mat-icon class="up">thumb_up</mat-icon>
+              } @else if (a.feedback === -1) {
+                <mat-icon class="down">thumb_down</mat-icon>
+              }
+            </span>
+          </button>
+          @if (expanded() === a.message_id) {
+            <div class="r-detail">
+              @if (a.answerable) {
+                {{ a.answer }}
+              } @else {
+                <span class="muted">Not answered: {{ a.abstain_reason }}</span>
+              }
+            </div>
+          }
+        } @empty {
+          <p class="muted">No answers match.</p>
+        }
+      </div>
+    </section>
+
+    @if (u.documents.length) {
+      <section class="card">
+        <div class="s-head">
+          <mat-icon class="s-icon">description</mat-icon>
+          <h3>By document</h3>
+        </div>
+        <div class="docs">
+          @for (d of u.documents; track d.document) {
+            <div class="doc">
+              <div class="d-name">
+                {{ d.document }}
+                <span class="muted small"
+                  >· {{ d.answers }} answers
+                  @if (d.thumbs_down) {
+                    · {{ d.thumbs_down }} 👎
+                  }
+                </span>
+              </div>
+              <ng-container
+                *ngTemplateOutlet="meter; context: { label: 'Faithfulness', value: d.faithfulness }"
+              />
+              <ng-container
+                *ngTemplateOutlet="
+                  meter;
+                  context: { label: 'Relevance', value: d.answer_relevancy }
+                "
+              />
+            </div>
+          }
+        </div>
+      </section>
+    }
+  }
+}

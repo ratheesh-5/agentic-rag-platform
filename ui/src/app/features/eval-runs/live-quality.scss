@@ -1,0 +1,526 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+
+  .lead {
+    flex: 1 1 400px;
+    margin: 0;
+  }
+}
+
+.bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.small {
+  font: var(--mat-sys-body-small);
+}
+
+// --- KPI tiles (buttons: click filters the answers list) ------------------------------------
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 8%);
+  }
+
+  // Selected tile: a ring INSIDE the border, so the page edge can never clip it (an outside
+  // ring lost its left side on the first tile).
+  &.active {
+    border-color: var(--mat-sys-primary);
+    box-shadow: inset 0 0 0 1px var(--mat-sys-primary);
+  }
+
+  &.good {
+    border-color: var(--ok);
+    background: var(--ok-bg);
+    .kpi-value {
+      color: var(--ok);
+    }
+  }
+  &.weak {
+    border-color: var(--mat-sys-error);
+    background: var(--mat-sys-error-container);
+    .kpi-value {
+      color: var(--mat-sys-error);
+    }
+  }
+}
+
+.kpi-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.kpi-value {
+  font: var(--mat-sys-headline-medium);
+
+  &.feedback {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font: var(--mat-sys-headline-small);
+
+    mat-icon {
+      color: var(--mat-sys-on-surface-variant);
+      margin-left: 4px;
+    }
+  }
+}
+
+.kpi-help {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// --- Section headers inside cards: icon + title on ONE line ----------------------------------
+.s-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+
+  h3 {
+    margin: 0;
+    font: var(--mat-sys-title-small);
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .hint {
+    font: var(--mat-sys-label-medium);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.s-icon {
+  flex: none;
+  color: var(--mat-sys-on-surface-variant);
+
+  &.missing,
+  &.test-icon {
+    color: var(--mat-sys-primary);
+  }
+  &.down,
+  &.low {
+    color: var(--mat-sys-error);
+  }
+}
+
+.section {
+  margin: 8px 0 0;
+  font: var(--mat-sys-title-medium);
+}
+
+// --- Score bars --------------------------------------------------------------------------------
+.meter-row {
+  display: grid;
+  grid-template-columns: 84px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  font: var(--mat-sys-body-small);
+}
+
+.meter-label {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.meter {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--mat-sys-surface-container-highest);
+  overflow: hidden;
+
+  .fill {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--mat-sys-outline);
+  }
+}
+
+.good .fill {
+  background: var(--ok);
+}
+.weak .fill {
+  background: var(--mat-sys-error);
+}
+.meter-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.good .meter-value {
+  color: var(--ok);
+}
+.weak .meter-value {
+  color: var(--mat-sys-error);
+}
+
+// --- Test a question ---------------------------------------------------------------------------
+.test {
+  border-color: var(--mat-sys-primary);
+  background: var(--mat-sys-surface-container-lowest);
+}
+
+.test-input {
+  display: flex;
+  gap: 8px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    background: var(--mat-sys-surface-container-low);
+    color: var(--mat-sys-on-surface);
+    font: var(--mat-sys-body-large);
+    outline: none;
+
+    &:focus {
+      border-color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+
+.example {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-label-medium);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--mat-sys-secondary-container);
+  }
+}
+
+.result {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  h4 {
+    margin: 0 0 6px;
+    font: var(--mat-sys-title-small);
+  }
+}
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--mat-sys-title-medium);
+  color: var(--ok);
+
+  &.no {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.scores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 6px 24px;
+  margin: 10px 0;
+}
+
+.answer-text {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.passage {
+  display: grid;
+  grid-template-columns: 1fr 120px 44px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-small);
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mat-sys-surface-container);
+  }
+}
+
+.cited {
+  margin-right: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  font: var(--mat-sys-label-small);
+}
+
+.p-score {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+blockquote {
+  margin: 4px 0 8px 8px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--mat-sys-primary);
+  background: var(--mat-sys-surface-container-low);
+  font: var(--mat-sys-body-small);
+}
+
+// --- Test box and suggestions: full width, stacked (side by side left gaps) ----------------
+.duo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// Test result: answer + scores left, passages right; stacked on narrow screens.
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 8px 24px;
+  align-items: start;
+
+  h4 {
+    margin-top: 0;
+  }
+}
+
+// Long lists show 5 rows and scroll inside their card (height measured by ShowRows).
+.scroll-list,
+.rows {
+  margin-top: 4px;
+}
+
+.hint-line {
+  margin: 6px 0 2px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.q {
+  font: var(--mat-sys-title-small);
+}
+
+.answer {
+  font: var(--mat-sys-body-small);
+  display: -webkit-box;
+  -webkit-line-clamp: 2; // keep long answers to two lines
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.meta {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.count {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font: var(--mat-sys-label-small);
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}
+
+// --- Answers list --------------------------------------------------------------------------------
+.search {
+  width: 220px;
+  max-width: 45%;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px 220px 28px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 8px;
+  border: none;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  background: none;
+  color: var(--mat-sys-on-surface);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover,
+  &.open {
+    background: var(--mat-sys-surface-container);
+  }
+}
+
+.r-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.r-q {
+  font: var(--mat-sys-title-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r-meta {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r-status {
+  justify-self: start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font: var(--mat-sys-label-small);
+  background: var(--ok-bg);
+  color: var(--ok);
+
+  &.no {
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.r-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  .meter-row {
+    grid-template-columns: 44px 1fr 40px;
+  }
+}
+
+.r-feedback mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+
+  &.up {
+    color: var(--ok);
+  }
+  &.down {
+    color: var(--mat-sys-error);
+  }
+}
+
+.r-detail {
+  padding: 8px 12px 12px;
+  background: var(--mat-sys-surface-container);
+  font: var(--mat-sys-body-medium);
+}
+
+.badge {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+  font: var(--mat-sys-label-small);
+}
+
+// Phones: status and scores go under the question.
+@media (max-width: 700px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) 28px;
+  }
+  .r-status,
+  .r-scores {
+    grid-column: 1 / -1;
+  }
+}
+
+// --- By document ------------------------------------------------------------------------------
+.docs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px 24px;
+}
+
+.doc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.d-name {
+  font: var(--mat-sys-title-small);
+}

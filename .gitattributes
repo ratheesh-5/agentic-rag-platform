@@ -1,0 +1,3 @@
+# Never convert line endings in binary documents (PDF byte offsets would break)
+*.pdf binary
+*.docx binary

@@ -1,0 +1,72 @@
+{
+  "name": "Knowledge Assistant",
+  "description": "Ask me about the documents in this knowledge base. I search all of them and combine what I find into one answer, with its sources so you can check it. If the documents don't cover a question (like \"What is AI?\"), I say so instead of guessing.",
+  "topics": [
+    {
+      "title": "RAG design",
+      "description": "Chunking, embeddings, hybrid search, reranking, recommended defaults",
+      "examples": [
+        "What does HyDE do?",
+        "How are dense and BM25 results merged in hybrid search?"
+      ],
+      "documents": [
+        "rag_design_guide.pdf"
+      ]
+    },
+    {
+      "title": "LLM evaluation",
+      "description": "Retrieval metrics, LLM-as-judge, golden sets, release gates",
+      "examples": [
+        "How is MRR defined in the evaluation playbook?",
+        "What is the release gate threshold for Recall@5?"
+      ],
+      "documents": [
+        "llm_evaluation_playbook.pdf"
+      ]
+    },
+    {
+      "title": "Agent design",
+      "description": "Tool calling, multi-agent patterns, human approval rules",
+      "examples": [
+        "Which multi-agent topology is approved for production?",
+        "Which agent actions require human approval?"
+      ],
+      "documents": [
+        "agent_design_patterns.md"
+      ]
+    },
+    {
+      "title": "Model selection",
+      "description": "Model tiers per use case, cost caps, approvals",
+      "examples": [
+        "Which model tier is approved for document classification and what is its cost cap?",
+        "Which models may process data classified as Confidential-Restricted?"
+      ],
+      "documents": [
+        "model_selection_policy_v1.docx"
+      ]
+    },
+    {
+      "title": "Prompt & engineering practices",
+      "description": "Prompt standards, model call policies, code review rules",
+      "examples": [
+        "What temperature should be used by default for question answering prompts?",
+        "What timeout and retry policy must client code use when calling models?"
+      ],
+      "documents": [
+        "ai_engineering_handbook.docx"
+      ]
+    },
+    {
+      "title": "LLM operations & incidents",
+      "description": "Hallucination spikes, prompt injection, cost overruns, error codes",
+      "examples": [
+        "What does error code LUM-2001 mean?",
+        "Which kill switch disables side-effecting agent tools during a prompt injection incident?"
+      ],
+      "documents": [
+        "llmops_incident_runbook.md"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+# CI (Phase 7): every push and pull request is linted, tested, quality-gated and built.
+# All jobs run in parallel on GitHub's Linux machines. No secrets are required:
+# - unit tests use fake models (never a real API),
+# - the quality gate uses the committed embedding snapshot (data/eval/embedding_snapshot.db).
+# Optional secret GEMINI_API_KEY: only used by the gate when a change creates NEW texts to embed
+# (e.g. another chunk size); without it that case is skipped with a warning, never a false fail.
+# .NET analogy: an Azure DevOps / GitHub pipeline running `dotnet test` + a quality gate.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency: # a newer push cancels the older run of the same branch
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (ruff + pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.0"
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest -q
+
+  quality-gate:
+    name: Quality gate (retrieval vs release gates)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.0"
+          python-version: "3.12"
+      - run: uv sync --frozen --no-dev
+      # Fails the build if Recall@5 < 0.85, MRR < 0.70, or either drops > 0.02 below
+      # data/eval/gate_baseline.json. Prints the gate table in the job log.
+      - run: uv run rag gate
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+  ui:
+    name: UI (Vitest + production build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci
+      - run: npx prettier --check "src/**/*.{ts,html,scss}"
+      - run: npm test -- --watch=false
+      - run: npm run build
+
+  audit:
+    name: Dependency audit (known vulnerabilities)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.0"
+          python-version: "3.12"
+      # Python: the exact runtime packages from uv.lock, checked against the PyPI advisory DB.
+      # Ignored after review (no fixed version exists yet; not reachable in this app):
+      # - PYSEC-2026-2447 diskcache: needs write access to a cache directory (we don't use it).
+      # - PYSEC-2026-3046 ragas: SSRF in the multi-modal faithfulness metric (we don't use it).
+      - run: uv export --frozen --no-dev --no-hashes --no-emit-project -o requirements.txt
+      - run: >-
+          uvx pip-audit@2.10.1 -r requirements.txt --no-deps --disable-pip
+          --ignore-vuln PYSEC-2026-2447 --ignore-vuln PYSEC-2026-3046
+      # UI: fail on high/critical issues in the packages shipped to the browser.
+      - run: npm audit --omit=dev --audit-level=high
+        working-directory: ui
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Build only (no push): proves both images still build from a clean checkout.
+      - run: docker build -t rag-platform-api .
+      - run: docker build -t rag-platform-ui ui

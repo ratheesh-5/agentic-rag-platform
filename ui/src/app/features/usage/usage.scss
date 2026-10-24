@@ -1,0 +1,397 @@
+.small {
+  font: var(--mat-sys-body-small);
+}
+
+.spacer {
+  flex: 1;
+}
+
+// Clickable cards/rows are <button>s: reset the browser's button look.
+%reset-button {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+// --- LangSmith status ----------------------------------------------------------------------------
+.tracing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container);
+
+  span {
+    flex: 1 1 300px;
+  }
+
+  &.on {
+    background: var(--ok-bg);
+
+    > mat-icon {
+      color: var(--ok);
+    }
+  }
+}
+
+// --- KPI tiles (buttons: click filters the calls list) -----------------------------------------
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); // 5 tiles fit on one row
+  gap: 12px;
+}
+
+.tile {
+  @extend %reset-button;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+
+  &:not(.static):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 8%);
+  }
+
+  &.static {
+    cursor: default;
+  }
+
+  // Selected: a ring inside the border (an outside ring gets clipped at the page edge).
+  &.active {
+    border-color: var(--mat-sys-primary);
+    box-shadow: inset 0 0 0 1px var(--mat-sys-primary);
+  }
+
+  &.bad {
+    border-color: var(--mat-sys-error);
+    background: var(--mat-sys-error-container);
+
+    .t-value {
+      color: var(--mat-sys-error);
+    }
+  }
+}
+
+.t-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.t-value {
+  font: var(--mat-sys-headline-medium);
+}
+
+.t-help {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// --- Per-day chart: bars are buttons ------------------------------------------------------------
+.chart {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  height: 180px;
+  padding-top: 8px;
+}
+
+.bar-col {
+  @extend %reset-button;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+
+  &:not(:disabled):hover {
+    background: var(--mat-sys-surface-container);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &.selected {
+    background: var(--mat-sys-primary-container);
+  }
+
+  &.dim .bar {
+    opacity: 0.35;
+  }
+}
+
+.bar {
+  width: 100%;
+  max-width: 36px;
+  border-radius: 6px 6px 0 0;
+  background: var(--mat-sys-primary);
+  transition:
+    height 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.bar-value,
+.bar-date {
+  font: var(--mat-sys-label-small);
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+}
+
+// --- Breakdowns: rows are buttons ----------------------------------------------------------------
+// Both cards get the same height (the taller one sets it); long lists scroll inside (ShowRows).
+.two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.row {
+  @extend %reset-button;
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 6px;
+  border: none;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 0;
+  background: none;
+
+  &:hover {
+    background: var(--mat-sys-surface-container);
+  }
+
+  &.active {
+    background: var(--mat-sys-primary-container);
+  }
+}
+
+.r-icon {
+  flex: none;
+  color: var(--mat-sys-primary);
+}
+
+.r-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.r-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.r-name {
+  font: var(--mat-sys-title-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.r-num {
+  font: var(--mat-sys-label-large);
+  white-space: nowrap;
+}
+
+.r-meta {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.share,
+.lat-bar {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--mat-sys-surface-container-highest);
+  overflow: hidden;
+
+  .fill {
+    display: block;
+    height: 100%;
+    background: var(--mat-sys-primary);
+  }
+}
+
+.err {
+  color: var(--mat-sys-error);
+}
+
+// --- Calls list ---------------------------------------------------------------------------------
+.search {
+  width: 240px;
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+}
+
+.toolbar,
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar {
+  justify-content: space-between;
+}
+
+.filter {
+  @extend %reset-button;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 12px;
+  border: none;
+  border-radius: 999px;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font: var(--mat-sys-label-large);
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.hint-line {
+  margin: 8px 0 0;
+}
+
+.calls {
+  margin-top: 4px;
+}
+
+.call {
+  @extend %reset-button;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 180px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 6px;
+  border: none;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  background: none;
+
+  &:hover,
+  &.open {
+    background: var(--mat-sys-surface-container);
+  }
+
+  &.failed .c-icon {
+    color: var(--mat-sys-error);
+  }
+}
+
+.c-icon {
+  color: var(--mat-sys-primary);
+}
+
+.c-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.c-name {
+  font: var(--mat-sys-body-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.c-meta {
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.c-lat {
+  display: grid;
+  grid-template-columns: 1fr 52px;
+  align-items: center;
+  gap: 8px;
+}
+
+.c-time {
+  font: var(--mat-sys-title-small);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.c-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px 12px 46px;
+  background: var(--mat-sys-surface-container);
+
+  dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 16px;
+    margin: 0;
+    font: var(--mat-sys-body-small);
+  }
+
+  dt {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.empty {
+  padding: 12px 4px;
+}
+
+// Phones: the latency column goes under the call.
+@media (max-width: 600px) {
+  .call {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .c-lat {
+    grid-column: 2;
+  }
+}

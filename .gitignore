@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+
+# Secrets (.env and any profile such as .env.alt; the template stays tracked)
+.env
+.env.*
+!.env.example
+
+# Generated data (index and database are rebuilt from documents)
+data/index/
+# Documents uploaded through the API (user content, not part of the repo)
+data/uploads/
+data/*.db
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,34 @@
+# Dependabot (security plan B12): GitHub checks our dependencies every week and opens pull
+# requests with updates; security fixes are proposed as soon as an advisory is published.
+# Each pull request runs the normal CI (tests, quality gate, audit), so an update is only
+# merged when everything still passes. Minor/patch updates are grouped into one PR per
+# ecosystem to keep the noise down.
+# .NET analogy: like Dependabot / Renovate for NuGet packages.
+
+version: 2
+updates:
+  - package-ecosystem: uv            # pyproject.toml + uv.lock
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      python-minor:
+        update-types: [minor, patch]
+    ignore:
+      # Pinned on purpose: ragas 0.4.3 needs langchain-community < 0.4.
+      - dependency-name: langchain-community
+        update-types: [version-update:semver-minor, version-update:semver-major]
+
+  - package-ecosystem: npm           # the Angular UI
+    directory: /ui
+    schedule: { interval: weekly }
+    groups:
+      ui-minor:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+
+  - package-ecosystem: docker        # base images (python, uv, node, nginx)
+    directories: [/, /ui]
+    schedule: { interval: weekly }
