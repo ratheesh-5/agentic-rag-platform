@@ -2,7 +2,7 @@
 # Stage 1 builds with Node; stage 2 contains only nginx + the built files (no Node, small image).
 # .NET analogy: like publishing a Blazor WebAssembly app and hosting the output on a web server.
 
-FROM node:24-alpine AS build
+FROM node:25-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
