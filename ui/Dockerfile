@@ -11,7 +11,7 @@ RUN npx ng build
 
 # nginx-unprivileged: the official nginx build that runs as a normal user (uid 101) instead of
 # root (security plan B4), listening on 8080 because ports below 1024 need root.
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist/ui/browser /usr/share/nginx/html
 EXPOSE 8080
