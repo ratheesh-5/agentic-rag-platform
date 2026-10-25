@@ -3,6 +3,7 @@
 // optimizer started from the page (background run, progress polled).
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Component, input } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { of } from 'rxjs';
@@ -10,7 +11,14 @@ import { of } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { ConfirmService } from '../../core/confirm';
 import { ChatProvider, OptimizerRun, RagConfig, Recommendation } from '../../core/models';
+import { ModelsCard } from './models-card';
 import { Settings } from './settings';
+
+/** The Models card has its own spec (models-card.spec.ts); here it is a stand-in. */
+@Component({ selector: 'app-models-card', template: '' })
+class ModelsCardStub {
+  readonly fallback = input(true);
+}
 
 const BASE = 'http://api.test';
 const CONFIG: RagConfig = {
@@ -25,6 +33,11 @@ const CONFIG: RagConfig = {
   max_regenerations: 1,
   chat_provider: 'gemini',
   chat_fallback: true,
+  gemini_model: '',
+  groq_model: '',
+  judge_model: '',
+  gemini_backup_model: '',
+  groq_backup_model: '',
 };
 const PROVIDERS: ChatProvider[] = [
   { name: 'gemini', model: 'gemini-3.1-flash-lite', configured: true },
@@ -88,6 +101,10 @@ describe('Settings', () => {
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: BASE },
       ],
+    });
+    TestBed.overrideComponent(Settings, {
+      remove: { imports: [ModelsCard] },
+      add: { imports: [ModelsCardStub] },
     });
     fixture = TestBed.createComponent(Settings);
     page = fixture.componentInstance;
@@ -187,6 +204,9 @@ describe('Settings', () => {
     await load(null);
     expect(text()).toContain('Answer model');
     expect(text()).toContain('Model: gemini-3.1-flash-lite');
+    expect(page.answerModel({ ...CONFIG, gemini_model: 'gemini-pro' }, 'gemini')).toBe(
+      'gemini-pro',
+    );
     page.changeProvider('groq');
     const req = http.expectOne(`${BASE}/config/model`);
     expect(req.request.body).toEqual({ chat_provider: 'groq', chat_fallback: true });
@@ -203,10 +223,13 @@ describe('Settings', () => {
     expect(page.config()?.chat_fallback).toBe(true);
   });
 
-  it('without a second provider, fallback is off and explains what to set up', async () => {
+  it('without a second provider, fallback can still use a backup model', async () => {
     await load(null, IDLE, [PROVIDERS[0], { ...PROVIDERS[1], configured: false }]);
     expect(page.canFallBack()).toBe(false);
+    expect(text()).toContain('its backup model (if chosen below) answers instead');
     expect(text()).toContain('add GROQ_API_KEY to .env');
+    const slide = fixture.nativeElement.querySelector('mat-slide-toggle button');
+    expect(slide.disabled).toBe(false); // the switch stays usable for the backup model
   });
 
   it('shows settings in plain words', () => {

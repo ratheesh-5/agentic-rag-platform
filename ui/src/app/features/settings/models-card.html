@@ -1,0 +1,128 @@
+<section class="card models">
+  <div class="g-head">
+    <mat-icon>memory</mat-icon>
+    <h3>Models</h3>
+    <span class="muted small">A new answer model must pass a quality check before it is used</span>
+  </div>
+
+  @if (error()) {
+    <div class="error" role="alert"><mat-icon>error</mat-icon> {{ error() }}</div>
+  }
+  @if (notice()) {
+    <div class="info" role="status"><mat-icon>task_alt</mat-icon> {{ notice() }}</div>
+  }
+
+  @if (draft(); as d) {
+    @for (r of rows(); track r.key) {
+      <div class="row">
+        <div class="label">
+          <span class="s-label">{{ r.label }}</span>
+          <span class="s-help">{{ r.help }}</span>
+        </div>
+        @if (r.slot.configured) {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-select
+              [value]="d[r.key]"
+              (selectionChange)="set(r, $event.value)"
+              [aria-label]="r.label"
+              [disabled]="r.backup && !fallback()"
+            >
+              @if (r.backup) {
+                <mat-option value="">None</mat-option>
+              }
+              @for (m of options(r); track m) {
+                <mat-option [value]="m"
+                  >{{ m }}{{ m === r.slot.default && !r.backup ? ' (default)' : '' }}</mat-option
+                >
+              }
+            </mat-select>
+          </mat-form-field>
+          <div class="status">
+            @if (r.backup && !fallback()) {
+              <span class="muted small">Turn on Automatic fallback to use a backup model.</span>
+            } @else if (d[r.key]; as m) {
+              <!-- Buttons on one line, results below (quality first, then test): same in every row -->
+              <div class="buttons">
+                <button
+                  mat-button
+                  (click)="test(r, m)"
+                  [disabled]="testOf(r.kind, m) === 'running'"
+                  matTooltip="One tiny call: is the model reachable with our key right now, and how fast?"
+                >
+                  Test
+                </button>
+                @if (r.kind !== 'judge' && (needsCheck(r, m) || checkOf(r.kind, m))) {
+                  <button
+                    mat-button
+                    (click)="check(r, m)"
+                    [disabled]="checkOf(r.kind, m)?.state === 'running'"
+                    matTooltip="6 demo questions with this model: does it cite its sources and refuse what the documents don't cover? Needed before use."
+                  >
+                    Check quality
+                  </button>
+                }
+              </div>
+              <div class="results">
+                @if (r.kind !== 'judge' && checkOf(r.kind, m); as c) {
+                  <span
+                    class="small"
+                    [class.ok]="c.ok"
+                    [class.bad]="c.state !== 'running' && !c.ok"
+                    [matTooltip]="c.error || ''"
+                  >
+                    @switch (c.state) {
+                      @case ('running') {
+                        Checking…
+                      }
+                      @case ('failed') {
+                        <mat-icon inline>error</mat-icon> Check failed
+                      }
+                      @default {
+                        <mat-icon inline>{{ c.ok ? 'verified' : 'error' }}</mat-icon>
+                        Quality {{ c.passed }}/{{ c.total }}
+                        {{ c.ok ? '· passed' : '· not enough' }}
+                      }
+                    }
+                  </span>
+                }
+                @if (testOf(r.kind, m); as t) {
+                  @if (t === 'running') {
+                    <span class="muted small">Testing…</span>
+                  } @else {
+                    <span class="small" [class.ok]="t.ok" [class.bad]="!t.ok" [title]="t.message">
+                      <mat-icon inline>{{ t.ok ? 'check_circle' : 'error' }}</mat-icon>
+                      {{ t.ok ? 'Test: answers (' + t.seconds + ' s)' : t.message }}
+                    </span>
+                  }
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <span class="muted small">Not set up: add its API key to .env and restart the API.</span>
+        }
+      </div>
+    }
+    <div class="row">
+      <div class="label">
+        <span class="s-label">Embedding model (search)</span>
+        <span class="s-help"
+          >Changing it means re-embedding every document, so it is set in .env only.</span
+        >
+      </div>
+      <span class="locked"><mat-icon inline>lock</mat-icon> {{ info()?.embedding }}</span>
+    </div>
+
+    <div class="actions">
+      @if (changed() && !allowed()) {
+        <span class="muted small">Run a passing quality check for the new answer model first.</span>
+      }
+      <button mat-stroked-button (click)="resetDraft()" [disabled]="!changed() || saving()">
+        Cancel
+      </button>
+      <button mat-flat-button (click)="save()" [disabled]="!changed() || !allowed() || saving()">
+        Save models
+      </button>
+    </div>
+  }
+</section>

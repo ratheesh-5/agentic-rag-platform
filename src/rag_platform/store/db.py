@@ -87,7 +87,8 @@ CREATE TABLE IF NOT EXISTS answer_scores (
     answer_relevancy REAL,
     judge_calls INTEGER NOT NULL,
     error TEXT,                     -- e.g. quota error: no scores, kept so it is visible
-    scored_at TEXT NOT NULL
+    scored_at TEXT NOT NULL,
+    judge TEXT NOT NULL DEFAULT ''  -- the judge model (scores of different judges differ)
 );
 CREATE TABLE IF NOT EXISTS llm_calls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -207,6 +208,12 @@ class Store:
             for col in ("threshold", "auto_threshold"):
                 if col not in cols:
                     self.conn.execute(f"ALTER TABLE collections ADD COLUMN {col} REAL")
+            # Model choice in Settings (plan G7): each score records its judge model.
+            cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(answer_scores)")}
+            if "judge" not in cols:
+                self.conn.execute(
+                    "ALTER TABLE answer_scores ADD COLUMN judge TEXT NOT NULL DEFAULT ''"
+                )
             # Phase 2: names were unique for everyone; with private collections they are unique
             # per owner. SQLite can't drop a column constraint, so an old table is rebuilt once
             # (same ids; nothing references collections by foreign key).
@@ -457,14 +464,15 @@ class Store:
         answer_relevancy: float | None,
         judge_calls: int,
         error: str | None,
+        judge: str = "",
     ) -> None:
         now = datetime.now(UTC).isoformat(timespec="seconds")
         with self.conn:
             self.conn.execute(
-                "INSERT OR REPLACE INTO answer_scores"
-                " (message_id, faithfulness, answer_relevancy, judge_calls, error, scored_at)"
-                " VALUES (?, ?, ?, ?, ?, ?)",
-                (message_id, faithfulness, answer_relevancy, judge_calls, error, now),
+                "INSERT OR REPLACE INTO answer_scores (message_id, faithfulness,"
+                " answer_relevancy, judge_calls, error, scored_at, judge)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (message_id, faithfulness, answer_relevancy, judge_calls, error, now, judge),
             )
 
     def usage_rows(self) -> list[dict]:

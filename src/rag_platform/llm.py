@@ -27,6 +27,7 @@ don't pay the cost of loading the Google SDK.
 """
 
 import logging
+import re
 import threading
 import time
 from collections import deque
@@ -76,7 +77,7 @@ def _chat(s: Settings, model: str, purpose: str) -> BaseChatModel:
     )
 
 
-def _groq(s: Settings, purpose: str) -> BaseChatModel:
+def _groq(s: Settings, purpose: str, model: str = "") -> BaseChatModel:
     from langchain_groq import ChatGroq
 
     class JsonSchemaGroq(ChatGroq):
@@ -87,13 +88,14 @@ def _groq(s: Settings, purpose: str) -> BaseChatModel:
         def with_structured_output(self, schema, *, method="json_schema", **kwargs):
             return super().with_structured_output(schema, method=method, **kwargs)
 
+    model = model or s.groq_model
     return JsonSchemaGroq(
-        model=s.groq_model,
+        model=model,
         api_key=s.groq_api_key,
-        rate_limiter=_rate_limiter(s.groq_model, s.groq_requests_per_minute, s.chat_burst),
+        rate_limiter=_rate_limiter(model, s.groq_requests_per_minute, s.chat_burst),
         timeout=s.chat_timeout_seconds,
         max_retries=s.chat_max_retries,
-        callbacks=[UsageLogger(s.db_path, s.groq_model, default_purpose=purpose)],
+        callbacks=[UsageLogger(s.db_path, model, default_purpose=purpose)],
     )
 
 
@@ -121,29 +123,61 @@ class FallbackChat:
     request, a bug) is raised at once - switching provider would only hide it.
     """
 
-    def __init__(self, models: dict[str, BaseChatModel], config_path: Path = RAG_CONFIG_FILE):
-        self.models = models  # provider name -> model; only configured providers
+    def __init__(
+        self,
+        models: dict[str, BaseChatModel],
+        config_path: Path = RAG_CONFIG_FILE,
+        factory: Callable[[str, str], BaseChatModel] | None = None,
+    ):
+        self.models = models  # provider name -> its .env default model; only configured ones
         self.config_path = config_path
+        # (provider, model name) -> a new model: for the models chosen in Admin › Settings.
+        self.factory = factory
+        self._named: dict[tuple[str, str], BaseChatModel] = {}  # built once per name
+        self._lock = threading.Lock()  # requests run in a thread pool
 
-    def order(self) -> list[str]:
+    def order(self, cfg=None) -> list[str]:
         """Providers to try, first choice first (only the first one if fallback is off)."""
-        cfg = load_rag_config(self.config_path)
+        cfg = cfg or load_rag_config(self.config_path)
         first = cfg.chat_provider if cfg.chat_provider in self.models else next(iter(self.models))
         rest = [name for name in self.models if name != first]
         return [first, *rest] if cfg.chat_fallback else [first]
 
+    def named(self, provider: str, model: str = "") -> BaseChatModel:
+        """A provider's model by name ('' = its .env default) - also used by the Settings
+        "Test" button and quality check, which must call exactly that model, without fallback."""
+        if not model or self.factory is None:
+            return self.models[provider]
+        with self._lock:
+            if (provider, model) not in self._named:
+                self._named[(provider, model)] = self.factory(provider, model)
+            return self._named[(provider, model)]
+
+    def attempts(self, cfg) -> list[tuple[str, str]]:
+        """(provider, model) pairs to try in order: each provider's model, then its backup
+        model (quota and overload are per model, so another model of the same provider often
+        still works). Fallback off = exactly one model."""
+        pairs = []
+        for name in self.order(cfg):
+            pairs.append((name, getattr(cfg, f"{name}_model", "")))
+            backup = getattr(cfg, f"{name}_backup_model", "")
+            if backup and self.factory is not None:
+                pairs.append((name, backup))
+        return pairs if cfg.chat_fallback else pairs[:1]
+
     def run(self, call: Callable[[BaseChatModel], object]):
-        names = self.order()
-        for i, name in enumerate(names):
+        cfg = load_rag_config(self.config_path)  # read once per call: order + chosen models
+        pairs = self.attempts(cfg)
+        for i, (name, model) in enumerate(pairs):
             try:
-                return call(self.models[name])
+                return call(self.named(name, model))
             except Exception as e:
                 problem = provider_problem(e)
-                if problem is None or i + 1 == len(names):
+                if problem is None or i + 1 == len(pairs):
                     raise
                 log.warning(  # the model calls themselves are in the usage log (llm_calls)
-                    "chat provider fallback",
-                    extra={"provider": name, "next": names[i + 1], "problem": problem},
+                    "chat model fallback",
+                    extra={"provider": name, "model": model or "default", "problem": problem},
                 )
 
     def invoke(self, messages, config=None, **kwargs):
@@ -179,17 +213,67 @@ def get_chat_model(s: Settings, config_path: Path = RAG_CONFIG_FILE) -> Fallback
     models = {"gemini": _chat(s, s.chat_model, "chat")}
     if s.groq_api_key:
         models["groq"] = _groq(s, "chat")
-    return FallbackChat(models, config_path)
+
+    def factory(provider: str, model: str) -> BaseChatModel:
+        return _chat(s, model, "chat") if provider == "gemini" else _groq(s, "chat", model)
+
+    return FallbackChat(models, config_path, factory)
 
 
-def get_judge_model(s: Settings) -> BaseChatModel:
+# Text-chat models only: the providers also list image, speech, transcription, robotics and
+# guard models that can't write a cited answer.
+_GEMINI_CHAT = re.compile(r"^gemini-\d+(\.\d+)?-(flash|pro)(-lite)?(-preview)?$")
+_NOT_CHAT = ("whisper", "guard", "orpheus", "tts", "safeguard")
+_model_lists: dict[str, tuple[float, list[str]]] = {}  # provider -> (fetched at, names)
+
+
+def list_chat_models(s: Settings, provider: str) -> list[str]:
+    """The chat models a provider offers today (cached 10 minutes; [] if the list can't be read
+    - Settings then shows only the current model). Listing models costs no quota."""
+    cached = _model_lists.get(provider)
+    if cached and time.monotonic() - cached[0] < 600:
+        return cached[1]
+    try:
+        if provider == "gemini":
+            from google import genai
+
+            # Keep the client in a variable while reading: the list is fetched page by page, and
+            # a client nobody refers to any more is closed before the pages are read.
+            client = genai.Client(api_key=s.gemini_api_key)
+            names = [
+                m.name.removeprefix("models/")
+                for m in client.models.list()
+                if "generateContent" in (getattr(m, "supported_actions", None) or [])
+            ]
+            names = [n for n in names if _GEMINI_CHAT.match(n)]
+        else:
+            import groq
+
+            client = groq.Groq(api_key=s.groq_api_key)
+            names = [
+                m.id
+                for m in client.models.list().data
+                if not any(x in m.id for x in _NOT_CHAT)
+                and (getattr(m, "context_window", 0) or 0) >= 32000
+            ]
+    except Exception as e:  # noqa: BLE001 - the list is a convenience, never an error
+        log.warning(
+            "model list unavailable", extra={"provider": provider, "error": type(e).__name__}
+        )
+        return []
+    names = sorted(set(names))
+    _model_lists[provider] = (time.monotonic(), names)
+    return names
+
+
+def get_judge_model(s: Settings, model: str = "") -> BaseChatModel:
     """LLM used as evaluation judge (by RAGAS, see evaluation/ragas_eval.py).
 
     Judges are usually run at temperature 0 for repeatability, but gemini-3.x models use fixed
     sampling defaults and ignore (and warn about) a temperature setting, so none is passed.
     Judge runs may therefore vary slightly between runs.
     """
-    return _chat(s, s.judge_model or s.chat_model, "judge")
+    return _chat(s, model or s.judge_model or s.chat_model, "judge")
 
 
 class RateLimitedEmbeddings(Embeddings):

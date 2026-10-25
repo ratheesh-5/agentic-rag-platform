@@ -18,6 +18,11 @@ import {
   EvalRunSummary,
   Me,
   Mode,
+  ModelCheck,
+  ModelKind,
+  ModelsChange,
+  ModelsInfo,
+  ModelTestResult,
   OptimizerRun,
   PrivateSummary,
   ProviderName,
@@ -204,6 +209,26 @@ export class ApiService {
   /** Answer model (admin): which provider writes answers first, fallback on/off. */
   setModel(chat_provider: ProviderName, chat_fallback: boolean): Observable<RagConfig> {
     return this.http.put<RagConfig>(`${this.base}/config/model`, { chat_provider, chat_fallback });
+  }
+
+  /** Settings › Models (admin): model slots, model lists, quality checks. No model calls. */
+  models(): Observable<ModelsInfo> {
+    return this.http.get<ModelsInfo>(`${this.base}/config/models`);
+  }
+
+  /** Use the chosen models (a new answer/backup model needs a passing check: 409 otherwise). */
+  setModels(change: ModelsChange): Observable<RagConfig> {
+    return this.http.put<RagConfig>(`${this.base}/config/models`, change);
+  }
+
+  /** One tiny call to exactly this model (1 AI call). */
+  testModel(kind: ModelKind, model: string): Observable<ModelTestResult> {
+    return this.http.post<ModelTestResult>(`${this.base}/config/models/test`, { kind, model });
+  }
+
+  /** Start the quality check of an answer model in the background (up to 6 AI calls). */
+  checkModel(kind: ModelKind, model: string): Observable<ModelCheck> {
+    return this.http.post<ModelCheck>(`${this.base}/config/models/check`, { kind, model });
   }
 
   evalRuns(): Observable<EvalRunSummary[]> {

@@ -40,7 +40,7 @@ from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBea
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 
-from rag_platform.config import ASSISTANT_FILE, RAG_CONFIG_FILE, Settings
+from rag_platform.config import ASSISTANT_FILE, RAG_CONFIG_FILE, Settings, load_rag_config
 from rag_platform.evaluation.gates import GATES_FILE
 from rag_platform.observability import PRICES_FILE
 from rag_platform.store.db import Store
@@ -86,6 +86,7 @@ class Services:
     prices_path: Path = PRICES_FILE  # optional model prices for the usage report
     rng: Callable[[], float] = random.random  # online-eval sampling (tests make it fixed)
     evaluator: object | None = None  # online-eval judge (RagasEvaluator), created on first use
+    evaluator_model: str = ""  # the judge model it was built with ('' = a test's fake)
     # In-memory FAISS + BM25 cache (api/service.py SearchCache); created lazily to avoid an
     # import cycle (service imports deps).
     _search: object | None = None
@@ -98,13 +99,21 @@ class Services:
             self._search = SearchCache()
         return self._search
 
+    def judge_name(self) -> str:
+        """The judge model: chosen in Admin › Settings, else JUDGE_MODEL, else the chat model."""
+        chosen = load_rag_config(self.config_path).judge_model
+        return chosen or self.settings.judge_model or self.settings.chat_model
+
     def answer_evaluator(self):
-        """The RAGAS judge for online evaluation, built once (tests assign a fake)."""
-        if self.evaluator is None:
+        """The RAGAS judge for online evaluation, rebuilt only when the judge model changes in
+        Settings (tests assign a fake, which is then kept)."""
+        name = self.judge_name()
+        if self.evaluator is None or (self.evaluator_model and self.evaluator_model != name):
             from rag_platform.evaluation.ragas_eval import RagasEvaluator  # loads RAGAS lazily
             from rag_platform.llm import get_judge_model
 
-            self.evaluator = RagasEvaluator(get_judge_model(self.settings), self.embedder)
+            self.evaluator = RagasEvaluator(get_judge_model(self.settings, name), self.embedder)
+            self.evaluator_model = name
         return self.evaluator
 
     # field(default_factory=...) = a new limiter per Services object (tests get a fresh one).

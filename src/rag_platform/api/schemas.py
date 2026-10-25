@@ -105,6 +105,73 @@ class ModelChange(BaseModel):
     chat_fallback: bool
 
 
+ModelKind = Literal["gemini", "groq", "judge"]
+
+
+class ModelCheckItem(BaseModel):
+    """One question of a model quality check."""
+
+    id: str  # golden-set id, e.g. "q06"
+    question: str
+    ok: bool
+    note: str  # "cited the right document", "refused correctly", ...
+
+
+class ModelCheck(BaseModel):
+    """Quality check of one answer model (plan G7): a few demo questions answered with exactly
+    that model; it must pass before the model can be used for answers."""
+
+    kind: Literal["gemini", "groq"]
+    model: str
+    state: Literal["running", "done", "failed"]
+    passed: int = 0
+    total: int = 0
+    ok: bool = False  # passed >= the minimum
+    error: str | None = None
+    started_at: str
+    finished_at: str | None = None
+    items: list[ModelCheckItem] = []
+
+
+class ModelSlot(BaseModel):
+    """One model choice in Admin › Settings › Models."""
+
+    kind: ModelKind
+    configured: bool  # the provider has its API key in .env
+    current: str  # the model in use
+    default: str  # the .env model (used when nothing is chosen)
+    backup: str = ""  # answer models: same-provider backup ("" = none; never for the judge)
+    options: list[str]  # models the provider offers today ([] = list not available)
+
+
+class ModelsInfo(BaseModel):
+    slots: list[ModelSlot]  # gemini, groq, judge
+    embedding: str  # shown, never changed here (needs re-indexing every document)
+    checks: list[ModelCheck]  # the latest check per model
+    check_minimum: int  # passes needed out of the check questions
+
+
+class ModelsChange(BaseModel):
+    """Chosen models; "" = the .env default."""
+
+    gemini_model: str = ""
+    groq_model: str = ""
+    judge_model: str = ""
+    gemini_backup_model: str = ""  # "" = no backup
+    groq_backup_model: str = ""
+
+
+class ModelRequest(BaseModel):
+    kind: ModelKind
+    model: str = Field(min_length=1, max_length=100)
+
+
+class ModelTestResult(BaseModel):
+    ok: bool
+    message: str  # the model's reply, or why it failed
+    seconds: float
+
+
 class ChatResponse(BaseModel):
     conversation_id: int
     collection_id: int  # the collection this conversation searches
@@ -321,5 +388,6 @@ class QualityTestResult(BaseModel):
     faithfulness: float | None
     answer_relevancy: float | None
     judge_calls: int
+    judge_model: str = ""  # who scored it (Admin › Settings › Models)
     score_error: str | None
     seconds: float

@@ -194,6 +194,7 @@ describe('LiveQuality', () => {
       faithfulness: 1,
       answer_relevancy: 0.95,
       judge_calls: 4,
+      judge_model: 'gemini-judge',
       score_error: null,
       seconds: 9.5,
     };

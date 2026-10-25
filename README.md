@@ -54,7 +54,7 @@ metrics, the agentic workflow and the optimizer.
 - **Observability:** LangSmith tracing (every request as a tree of steps with prompts, tokens
   and timings) plus a local usage log of every model call, shown on an Admin › Usage page
   (calls, tokens, latency, errors, optional cost) with links to the LangSmith traces; tiles, days, purposes and models filter one list of calls.
-- **CI with a quality gate:** every push runs lint, 230 + 126 tests, the UI build, a dependency
+- **CI with a quality gate:** every push runs lint, 244 + 134 tests, the UI build, a dependency
   vulnerability audit, Docker image builds and a retrieval quality gate (Recall@5 ≥ 0.85, MRR ≥ 0.70, no drop > 0.02 vs the
   baseline) - without any API key, from a committed embedding snapshot.
 - **Docker Compose:** the API and the UI (nginx) start with one command; containers run as
@@ -189,10 +189,10 @@ client → Web application** with the JavaScript origins `http://localhost`,
 ## Development
 
 ```bash
-uv run pytest                            # 230 backend tests, fake models, no API calls
+uv run pytest                            # 244 backend tests, fake models, no API calls
 uv run ruff check . && uv run ruff format .
 uv run rag gate                          # CI quality gate locally (no API key needed)
-cd ui && npm test -- --watch=false       # 126 UI tests (Vitest), HTTP mocked
+cd ui && npm test -- --watch=false       # 134 UI tests (Vitest), HTTP mocked
 ```
 
 **CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every push and pull

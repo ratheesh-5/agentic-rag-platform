@@ -273,6 +273,7 @@ export interface QualityTestResult {
   faithfulness: number | null;
   answer_relevancy: number | null;
   judge_calls: number;
+  judge_model: string; // who scored it (Settings › Models)
   score_error: string | null;
   seconds: number;
 }
@@ -361,6 +362,60 @@ export interface RagConfig {
   max_regenerations: number;
   chat_provider: ProviderName; // writes answers first
   chat_fallback: boolean; // the other provider takes over on quota / overload errors
+  // Settings › Models: chosen models ('' = the .env default) and same-provider backups ('' = none)
+  gemini_model: string;
+  groq_model: string;
+  judge_model: string;
+  gemini_backup_model: string;
+  groq_backup_model: string;
+}
+
+/** Settings › Models: a model slot (answer model per provider, or the judge). */
+export type ModelKind = 'gemini' | 'groq' | 'judge';
+
+export interface ModelSlot {
+  kind: ModelKind;
+  configured: boolean; // the provider's API key is set on the server
+  current: string; // the model in use
+  default: string; // the .env model
+  backup: string; // answer models: same-provider backup ('' = none)
+  options: string[]; // models the provider offers today ([] = list not available)
+}
+
+/** Quality check of one answer model: a few demo questions answered with exactly that model. */
+export interface ModelCheck {
+  kind: 'gemini' | 'groq';
+  model: string;
+  state: 'running' | 'done' | 'failed';
+  passed: number;
+  total: number;
+  ok: boolean;
+  error: string | null;
+  started_at: string;
+  finished_at: string | null;
+  items: { id: string; question: string; ok: boolean; note: string }[];
+}
+
+export interface ModelsInfo {
+  slots: ModelSlot[];
+  embedding: string; // shown only: changing it means re-indexing every document
+  checks: ModelCheck[];
+  check_minimum: number;
+}
+
+/** PUT /config/models body: '' = the .env default (models) or none (backups). */
+export interface ModelsChange {
+  gemini_model: string;
+  groq_model: string;
+  judge_model: string;
+  gemini_backup_model: string;
+  groq_backup_model: string;
+}
+
+export interface ModelTestResult {
+  ok: boolean;
+  message: string;
+  seconds: number;
 }
 
 /** A chat provider and whether its key is set on the server (the key itself is never sent). */

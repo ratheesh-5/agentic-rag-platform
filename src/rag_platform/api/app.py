@@ -23,6 +23,8 @@ Endpoints (admin = X-API-Key header with one of API_KEYS; guest = X-Guest-Id hea
     PUT    /config/mode         switch the answer mode: fast / agentic / auto (admin)
     GET    /config/providers    chat providers and whether each is set up (admin)
     PUT    /config/model        answer model: Gemini or Groq first, fallback on/off (admin)
+    /config/models...           choose answer / backup / judge models, test, quality check
+                                (admin, see api/models.py)
     /eval/..., /optimizer/...   quality checks, runs, release gates, optimizer approval
                                 (see api/evaluation.py)
     /usage/...                  usage log: calls, tokens, latency, cost; LangSmith links
@@ -84,6 +86,7 @@ from rag_platform.api.deps import (
     write_lock,
 )
 from rag_platform.api.evaluation import router as evaluation_router
+from rag_platform.api.models import router as models_router
 from rag_platform.api.schemas import (
     AskRequest,
     AskResponse,
@@ -547,3 +550,4 @@ app.include_router(chat_router)  # /chat, /conversations, /messages (api/chat.py
 app.include_router(collections_router)  # /collections (api/collections.py)
 app.include_router(evaluation_router)  # /eval/..., /optimizer/... (api/evaluation.py)
 app.include_router(usage_router)  # /usage/... (api/usage.py)
+app.include_router(models_router)  # /config/models... (api/models.py)

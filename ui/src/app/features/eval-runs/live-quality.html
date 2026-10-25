@@ -147,7 +147,12 @@
         <div class="verdict" [class.no]="!r.answerable">
           <mat-icon>{{ r.answerable ? 'check_circle' : 'block' }}</mat-icon>
           {{ r.answerable ? 'Answered from the documents' : 'Not in the documents' }}
-          <span class="muted small">· {{ r.seconds }} s · {{ r.judge_calls }} judge calls</span>
+          <span class="muted small"
+            >· {{ r.seconds }} s · {{ r.judge_calls }} judge calls
+            @if (r.judge_calls && r.judge_model) {
+              ({{ r.judge_model }})
+            }
+          </span>
         </div>
         <div class="result-grid">
           <div>

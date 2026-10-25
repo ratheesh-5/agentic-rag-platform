@@ -280,7 +280,7 @@ flowchart LR
     Q([AI call]) --> P[Chosen provider<br/>e.g. Gemini]
     P -->|answer| OK([Done])
     P -->|"quota (429) · overloaded (503/504) · timeout"| F{fallback on?}
-    F -->|yes| G[Other provider<br/>e.g. Groq] --> OK
+    F -->|yes| B[Its backup model<br/>if chosen, plan G7] -->|still failing| G[Other provider<br/>e.g. Groq] --> OK
     F -->|no| E([429 / 503 to the user])
     P -->|any other error| X([Raised - a bug is not hidden])
 ```
@@ -296,6 +296,38 @@ flowchart LR
 - Limits: Groq free tier ~1,000 requests/day but ~8,000 tokens/min per model (an answer prompt is
   ~2,000 tokens) - `GROQ_REQUESTS_PER_MINUTE` 5. `GET /config/providers` shows which providers
   have a key (never the key); the usage log names the model of every call.
+
+### Model choice - answer, backup and judge models in Settings (2026-10-25, plan G7)
+
+Admin › Settings › **Models** (`api/models.py`, UI `features/settings/models-card.ts`) chooses the
+models without editing `.env` or restarting. Stored in `rag_config.json` (`gemini_model`,
+`groq_model`, `judge_model`, `gemini_backup_model`, `groq_backup_model`; "" = the `.env`
+default / no backup); they are admin choices like the mode, so optimizer recommendations keep
+them.
+
+- **Model lists:** `llm.list_chat_models` reads the providers' lists (free, no quota), keeps only
+  text-chat models (Gemini: `gemini-<version>-flash|pro[-lite][-preview]`; Groq: no speech /
+  guard models, context ≥ 32k) and caches them 10 minutes; if a list fails, only the current
+  models are shown.
+- **Backup model** of the same provider: quota and overload are **per model**, so another
+  Gemini model often still works when the first one doesn't. With fallback on, `FallbackChat`
+  tries: chosen provider's model → its backup → the other provider's model → its backup
+  (`FallbackChat.attempts`); fallback off = exactly one model, so the UI locks the backup
+  dropdowns while it is off. The fallback switch stays usable with one provider (a Gemini backup
+  needs no Groq key). Models by name are built once
+  (`FallbackChat.named`, own rate limiter per model).
+- **Test** (`POST /config/models/test`): one tiny call to exactly that model, no fallback.
+- **Quality check** (`POST /config/models/check`, background, page polls `GET /config/models`):
+  6 golden questions (q06, q11, q16, q26, q36 + the unanswerable u01) in fast mode on the demo
+  collection with exactly that model; pass = cites an evidence document / refuses u01; at least
+  5 of 6. A new answer or backup model can't be saved without a passing check (409) - a model can
+  answer "hello" and still break the contract (Groq once dropped the citations). Results in
+  `data/index/model_checks.json`. Cost: up to 6 answer calls.
+- **Judge:** Gemini only, no check, but switching asks first: scores of different judges are
+  not comparable, so every score records its judge (`answer_scores.judge`, shown in the
+  playground). `Services.answer_evaluator()` rebuilds the RAGAS evaluator when the judge changes.
+- **Embedding model:** shown locked. A change means re-embedding every document (vectors of two
+  models can't be compared) and re-exporting the CI snapshot - a deliberate `.env` change.
 
 ### Analyse mode - every document of a collection (2026-10-24, plan C14 / phase 3)
 

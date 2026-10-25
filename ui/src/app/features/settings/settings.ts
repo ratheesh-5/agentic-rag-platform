@@ -20,6 +20,7 @@ import {
   RagConfig,
   Recommendation,
 } from '../../core/models';
+import { ModelsCard } from './models-card';
 
 /** Icon per settings group. */
 const GROUP_ICONS: Record<string, string> = {
@@ -49,6 +50,7 @@ const GROUP_ICONS: Record<string, string> = {
     MatProgressBarModule,
     MatSlideToggleModule,
     MatTooltipModule,
+    ModelsCard,
   ],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
@@ -227,9 +229,10 @@ export class Settings {
     });
   }
 
-  /** The model name of a provider, e.g. "openai/gpt-oss-120b" for Groq. */
-  modelOf(name: ProviderName): string {
-    return this.providers().find((p) => p.name === name)?.model ?? '';
+  /** The model a provider answers with: chosen in the Models card, else its .env default. */
+  answerModel(cfg: RagConfig, name: ProviderName): string {
+    const chosen = name === 'gemini' ? cfg.gemini_model : cfg.groq_model;
+    return chosen || (this.providers().find((p) => p.name === name)?.model ?? '');
   }
 
   /**

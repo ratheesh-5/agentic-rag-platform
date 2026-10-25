@@ -1,0 +1,119 @@
+// Same look as the "Your choices" card on the Settings page (header, labels, help text).
+.models {
+  margin-bottom: 8px;
+}
+
+.g-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+  }
+
+  h3 {
+    margin: 0;
+    font: var(--mat-sys-title-medium);
+  }
+
+  .muted {
+    margin-left: auto;
+  }
+}
+
+// One model per row: label + help | dropdown | Test / Check quality and their results.
+.row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 280px) minmax(200px, 1.2fr);
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+}
+
+.s-label {
+  font: var(--mat-sys-title-small);
+}
+
+.s-help {
+  margin-top: 2px;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+mat-form-field {
+  width: 100%;
+  --mat-form-field-container-height: 40px;
+  --mat-form-field-container-vertical-padding: 8px;
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.buttons,
+.results {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+}
+
+.results:empty {
+  display: none;
+}
+
+.results {
+  padding-left: 12px; // under the button labels
+
+  .small {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.ok {
+  color: var(--ok);
+}
+
+.bad {
+  color: var(--mat-sys-error);
+}
+
+.locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: var(--mat-sys-title-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}

@@ -167,11 +167,30 @@ class RagConfig(BaseModel, frozen=True):
     # slow (see llm.FallbackChat). Embeddings always stay on Gemini.
     chat_provider: Literal["gemini", "groq"] = "gemini"
     chat_fallback: bool = True
+    # Models chosen in Admin › Settings › Models (plan G7); empty = the .env default
+    # (CHAT_MODEL, GROQ_MODEL, JUDGE_MODEL). The embedding model is NOT here: changing it means
+    # re-indexing every document, so it stays a deliberate .env change.
+    gemini_model: str = ""
+    groq_model: str = ""
+    judge_model: str = ""
+    # Optional backup model of the same provider, tried next when the model above is out of
+    # quota or overloaded (Gemini limits are per model). "" = none. Only with chat_fallback on.
+    gemini_backup_model: str = ""
+    groq_backup_model: str = ""
 
 
 # Settings the admin switches directly in Admin › Settings. Optimizer recommendations measure
 # search only: they ignore these fields and applying one keeps them.
-ADMIN_CHOICES = ("mode", "chat_provider", "chat_fallback")
+ADMIN_CHOICES = (
+    "mode",
+    "chat_provider",
+    "chat_fallback",
+    "gemini_model",
+    "groq_model",
+    "judge_model",
+    "gemini_backup_model",
+    "groq_backup_model",
+)
 
 
 # The ACTIVE pipeline config, versioned in git (like appsettings.json). Every command starts from

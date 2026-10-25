@@ -31,8 +31,9 @@ def should_score(rate: float, rng: Callable[[], float] = random.random) -> bool:
 
 
 def judge(svc, question: str, answer: str, contexts: list[str]) -> dict:
-    """Score one answer now: {faithfulness, answer_relevancy, error, judge_calls}."""
+    """Score one answer now: {faithfulness, answer_relevancy, error, judge_calls, judge}."""
     evaluator = svc.answer_evaluator()
+    name = svc.judge_name()  # recorded with the score: another judge gives other numbers
     llm = getattr(evaluator, "llm", None)
     calls_before = getattr(llm, "calls", 0)
     try:
@@ -44,7 +45,7 @@ def judge(svc, question: str, answer: str, contexts: list[str]) -> dict:
         }
     except Exception as e:  # noqa: BLE001 - a judge failure must not fail the caller
         result = {"faithfulness": None, "answer_relevancy": None, "error": str(e)[:300]}
-    return {**result, "judge_calls": getattr(llm, "calls", 0) - calls_before}
+    return {**result, "judge_calls": getattr(llm, "calls", 0) - calls_before, "judge": name}
 
 
 def score_answer(svc, message_id: int, question: str, answer: str, contexts: list[str]) -> None:

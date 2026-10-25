@@ -446,6 +446,7 @@ def quality_test(
         for c in ans.context
     ]
     scores = {"faithfulness": None, "answer_relevancy": None, "error": None, "judge_calls": 0}
+    scores["judge"] = svc.judge_name()
     if ans.answerable:  # a refusal has no claims to judge
         scores = judge(svc, req.question, ans.text, [c.text for c in ans.context])
     return QualityTestResult(
@@ -458,6 +459,7 @@ def quality_test(
         faithfulness=scores["faithfulness"],
         answer_relevancy=scores["answer_relevancy"],
         judge_calls=scores["judge_calls"],
+        judge_model=scores["judge"],
         score_error=scores["error"],
         seconds=round(time.perf_counter() - started, 1),
     )

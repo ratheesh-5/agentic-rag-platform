@@ -282,23 +282,26 @@
             >
           }
         </mat-button-toggle-group>
-        <span class="s-help">Answer model · Model: {{ modelOf(cfg.chat_provider) }}</span>
+        <span class="s-help">Answer model · Model: {{ answerModel(cfg, cfg.chat_provider) }}</span>
       </div>
       <div class="choice">
         <span class="s-label">Automatic fallback</span>
         <mat-slide-toggle
           #fallback
           aria-label="Automatic fallback"
-          [checked]="cfg.chat_fallback && canFallBack()"
-          [disabled]="switching() || !canFallBack()"
+          [checked]="cfg.chat_fallback"
+          [disabled]="switching()"
           (change)="changeFallback($event.checked, fallback)"
         ></mat-slide-toggle>
         <span class="s-help">
           @if (canFallBack()) {
-            When {{ providerNames[cfg.chat_provider] }} is out of quota, overloaded or too slow,
-            {{ providerNames[cfg.chat_provider === 'gemini' ? 'groq' : 'gemini'] }} answers instead.
+            When {{ providerNames[cfg.chat_provider] }} is out of quota, overloaded or too slow, its
+            backup model (if chosen below) and then
+            {{ providerNames[cfg.chat_provider === 'gemini' ? 'groq' : 'gemini'] }} answer instead.
           } @else {
-            Needs a second provider: add GROQ_API_KEY to .env and restart the API.
+            When {{ providerNames[cfg.chat_provider] }} is out of quota, overloaded or too slow, its
+            backup model (if chosen below) answers instead. For a second provider add GROQ_API_KEY
+            to .env and restart the API.
           }
         </span>
       </div>
@@ -308,6 +311,8 @@
       use Gemini requests to improve its products; Groq says it doesn't train on API data.
     </p>
   </section>
+
+  <app-models-card [fallback]="cfg.chat_fallback" (saved)="config.set($event)" />
 
   <h2 class="section">Measured settings</h2>
   <p class="muted small sub">Changed only through an optimizer recommendation you approve.</p>
