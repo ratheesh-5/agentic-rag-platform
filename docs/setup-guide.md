@@ -177,7 +177,7 @@ uv run python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 | Setting | Default | What it does |
 |---|---|---|
-| `CHAT_MODEL` | `gemini-3.5-flash-lite` | Answer model. If it is overloaded (errors 503/504), try e.g. `gemini-3.1-flash-lite`: each model has its own quota |
+| `CHAT_MODEL` | `gemini-3.5-flash-lite` | Default answer model. If it is overloaded (errors 503/504), try e.g. `gemini-3.1-flash-lite`: each model has its own quota. Admin › Settings › Models can choose another model (and a backup model) without editing `.env` |
 | `EMBEDDING_MODEL` | `gemini-embedding-001` | **Don't change** unless you re-index every document |
 | `GROQ_API_KEY` | empty | Optional second answer model ([Groq](https://console.groq.com), free key): takes over when Gemini is out of quota or overloaded; chosen in Admin › Settings › Answer model. Search keeps using Gemini |
 | `GROQ_MODEL`, `GROQ_REQUESTS_PER_MINUTE` | `openai/gpt-oss-120b`, 5 | Groq model and client-side limit (free tier: ~8,000 tokens per minute) |
@@ -540,8 +540,8 @@ FAISS file alone can be deleted any time: it is rebuilt from the database withou
 | `uv` or `node` "not recognized" after installing | Close and reopen the terminal (the PATH changed) |
 | Right after installing, `rag ...` fails with *"ImportError ... No module named ..."* (Windows) | The project folder path is too long (260-character limit): clone into a short folder such as `C:\projects\` and run `uv sync` again |
 | `rag check` fails with an auth/permission error | Wrong `GEMINI_API_KEY` in `.env`, or a space/quote around it |
-| Answers fail with *"Model quota exceeded"* (HTTP 429) | Free-tier limit reached: wait a minute (or until the next day for the daily limit), set another `CHAT_MODEL`, or add `GROQ_API_KEY` so Groq takes over |
-| *"The AI service is slow or overloaded"* (HTTP 503) | Google's model is busy: retry, or switch `CHAT_MODEL` (e.g. `gemini-3.1-flash-lite`) and restart the API |
+| Answers fail with *"Model quota exceeded"* (HTTP 429) | Free-tier limit reached: wait a minute (or until the next day for the daily limit), set another `CHAT_MODEL`, choose a **backup model** in Admin › Settings › Models (with Automatic fallback on), or add `GROQ_API_KEY` so Groq takes over |
+| *"The AI service is slow or overloaded"* (HTTP 503) | Google's model is busy: retry, choose another model or a backup model in Admin › Settings › Models (no restart), or switch `CHAT_MODEL` (e.g. `gemini-3.1-flash-lite`) and restart the API |
 | Every question says *"I couldn't find this"* | Nothing is indexed: run `uv run rag ingest` or upload documents; check `/ready` shows passages |
 | Port 8080 already in use | Use `UI_PORT` (see [section 7](#7-option-a---run-with-docker)) |
 | `UI_PORT=8081 docker compose ...` fails in PowerShell | That is bash syntax; use `$env:UI_PORT = "8081"; docker compose ...` |

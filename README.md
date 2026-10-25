@@ -34,6 +34,11 @@ metrics, the agentic workflow and the optimizer.
 - **Two AI providers with automatic fallback:** Gemini writes answers, and Groq takes over when
   Gemini is out of quota, overloaded or too slow (or the other way round - chosen in Admin ›
   Settings). The second model was checked on the golden set before it was allowed.
+- **Model choice in Settings:** the answer, backup and judge models are picked from the
+  providers' live model lists - no `.env` edit, no restart. A **backup model** of the same
+  provider is tried before the other provider (limits are per model); a new answer model must
+  pass a built-in **quality check** (6 golden questions: cited answers + a correct "I don't
+  know") before it can be used, and every score records which judge produced it.
 - **Evaluation** on a 50-question golden set: span-based retrieval metrics (Recall@K, MRR, …),
   abstention accuracy, and RAGAS (faithfulness, answer relevancy, context precision/recall,
   answer correctness). Run comparison and resumable runs.
