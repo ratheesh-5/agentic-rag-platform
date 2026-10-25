@@ -46,7 +46,15 @@ from fastapi import (
 
 from rag_platform.agents.optimizer_graph.experiments import ExperimentRunner
 from rag_platform.api import service
-from rag_platform.api.deps import Services, get_services, require_admin, write_lock
+from rag_platform.api.deps import (
+    Caller,
+    Services,
+    current_caller,
+    get_services,
+    require_admin,
+    visible_collection,
+    write_lock,
+)
 from rag_platform.api.schemas import (
     EvalRunSummary,
     HiddenFlag,
@@ -409,12 +417,23 @@ def quality_usage(include_admin: bool = False, svc: Services = Depends(get_servi
 
 
 @router.post("/quality/test", response_model=QualityTestResult, tags=["quality"])
-def quality_test(req: QualityTest, svc: Services = Depends(get_services)) -> QualityTestResult:
+def quality_test(
+    req: QualityTest,
+    svc: Services = Depends(get_services),
+    caller: Caller = Depends(current_caller),
+) -> QualityTestResult:
     """Admin playground: run the live pipeline on one question and score the answer right away
     (always, not sampled). Nothing is saved, so tests never distort the Live quality numbers.
+    It searches the chosen collection with that collection's similarity threshold, exactly like a
+    new chat there (someone else's private collection: 404, as everywhere).
     Cost: 1 answer call (0 if the similarity threshold refuses) + ~4 judge calls."""
+    store = svc.open_store()
+    try:
+        visible_collection(store, caller, req.collection_id)
+    finally:
+        store.close()
     started = time.perf_counter()
-    ans = service.answer(svc, load_rag_config(svc.config_path), req.question)
+    ans = service.answer(svc, load_rag_config(svc.config_path), req.question, req.collection_id)
     sources = service.sources_of(ans)
     cited = {(s.document, s.start) for s in sources}
     passages = [

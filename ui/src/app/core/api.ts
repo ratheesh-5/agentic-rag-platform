@@ -235,8 +235,11 @@ export class ApiService {
   }
 
   /** Admin playground: answer one question and score it now (not saved). */
-  testQuestion(question: string): Observable<QualityTestResult> {
-    return this.http.post<QualityTestResult>(`${this.base}/quality/test`, { question });
+  testQuestion(question: string, collectionId?: number): Observable<QualityTestResult> {
+    return this.http.post<QualityTestResult>(`${this.base}/quality/test`, {
+      question,
+      ...(collectionId ? { collection_id: collectionId } : {}),
+    });
   }
 
   /** Usage log: calls, tokens, latency, errors, cost for the last `days` days. */

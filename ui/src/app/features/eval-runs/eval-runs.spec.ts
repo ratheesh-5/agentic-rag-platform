@@ -104,7 +104,9 @@ describe('EvalRuns', () => {
     // The page opens on "Live quality" (tested in live-quality.spec.ts): answer its request,
     // then switch to the "Test-set checks" tab that these tests are about.
     http.match(`${BASE}/quality/usage`).forEach((r) => r.flush(EMPTY_USAGE));
-    http.match(`${BASE}/assistant`).forEach((r) => r.flush({ topics: [] }));
+    http.match((r) => r.url === `${BASE}/collections`).forEach((r) => r.flush([]));
+    await fixture.whenStable();
+    http.match((r) => r.url === `${BASE}/assistant`).forEach((r) => r.flush({ topics: [] }));
     fixture.debugElement.query(By.directive(MatTabGroup)).componentInstance.selectedIndex = 1;
     await fixture.whenStable();
   });

@@ -5,10 +5,24 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { API_BASE_URL } from '../../core/api';
-import { QualityTestResult, RecentAnswer, UsageSummary } from '../../core/models';
+import { Collection, QualityTestResult, RecentAnswer, UsageSummary } from '../../core/models';
 import { LiveQuality } from './live-quality';
 
 const BASE = 'http://api.test';
+const collection = (id: number, name: string): Collection => ({
+  id,
+  name,
+  description: '',
+  documents: 5,
+  passages: 30,
+  is_default: id === 1,
+  is_private: false,
+  can_manage: true,
+  threshold: 0.68,
+  threshold_source: 'measured',
+  threshold_override: null,
+});
+const COLLECTIONS = [collection(1, 'AI Engineering Handbook'), collection(2, 'HR policies')];
 
 function answer(id: number, extra: Partial<RecentAnswer> = {}): RecentAnswer {
   return {
@@ -92,8 +106,12 @@ describe('LiveQuality', () => {
     fixture = TestBed.createComponent(LiveQuality);
     page = fixture.componentInstance;
     http = TestBed.inject(HttpTestingController);
-    // Example questions for the test box come from the assistant profile.
-    http.expectOne(`${BASE}/assistant`).flush({
+    // The test box searches one collection (the selected one) and shows its example questions.
+    http.expectOne((r) => r.url === `${BASE}/collections`).flush(COLLECTIONS);
+    await fixture.whenStable();
+    const topics = http.expectOne((r) => r.url === `${BASE}/assistant`);
+    expect(topics.request.params.get('collection_id')).toBe('1');
+    topics.flush({
       name: 'x',
       description: '',
       topics: [{ title: 'RAG', description: '', examples: ['What does HyDE do?'] }],
@@ -145,11 +163,25 @@ describe('LiveQuality', () => {
     http.expectOne(`${BASE}/quality/usage?include_admin=true`).flush(USAGE);
   });
 
+  it("tests a question in the chosen collection, with that collection's example questions", async () => {
+    await load();
+    expect(text()).toContain('HR policies');
+    page.chooseCollection(2);
+    await fixture.whenStable();
+    const topics = http.expectOne((r) => r.url === `${BASE}/assistant`);
+    expect(topics.request.params.get('collection_id')).toBe('2');
+    topics.flush({ name: 'x', description: '', topics: [] });
+    page.runTest('How many days of annual leave do employees get?');
+    const req = http.expectOne(`${BASE}/quality/test`);
+    expect(req.request.body.collection_id).toBe(2);
+    req.flush({ detail: 'x' }, { status: 503, statusText: 'x' });
+  });
+
   it('tests a question: answer, scores and passages, nothing saved', async () => {
     await load();
     page.runTest('What does HyDE do?');
     const req = http.expectOne(`${BASE}/quality/test`);
-    expect(req.request.body).toEqual({ question: 'What does HyDE do?' });
+    expect(req.request.body).toEqual({ question: 'What does HyDE do?', collection_id: 1 });
     const result: QualityTestResult = {
       question: 'What does HyDE do?',
       answerable: true,

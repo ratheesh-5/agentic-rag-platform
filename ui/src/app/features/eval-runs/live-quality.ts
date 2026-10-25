@@ -19,6 +19,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { ApiService } from '../../core/api';
 import { ApiKeyStore } from '../../core/api-key.store';
+import { CollectionsStore } from '../../core/collections.store';
 import { describeError } from '../../core/errors';
 import { fmt } from '../../core/labels';
 import { ShowRows } from '../../core/show-rows.directive';
@@ -84,6 +85,16 @@ export class LiveQuality {
   // "Test a question" state.
   readonly examples = signal<string[]>([]);
   readonly testQuestion = signal('');
+  /**
+   * The collection the test question searches - like a new chat, one collection at a time
+   * (found in testing: a leave question was "not in the documents" because the test box only
+   * searched the demo collection while the leave policy lives in HR policies).
+   */
+  readonly collections = inject(CollectionsStore);
+  private readonly chosenCollection = signal<number | null>(null);
+  readonly testCollection = computed(
+    () => this.chosenCollection() ?? this.collections.selectedId(),
+  );
   readonly testing = signal(false);
   readonly testResult = signal<QualityTestResult | null>(null);
   readonly testError = signal('');
@@ -105,10 +116,15 @@ export class LiveQuality {
       this.includeAdmin(); // ...or the admin-chats switch
       untracked(() => this.load());
     });
-    // Example questions for the test box come from the assistant profile (assistant.json).
-    this.api.assistant().subscribe({
-      next: (p) => this.examples.set(p.topics.map((t) => t.examples[0]).filter(Boolean)),
-      error: () => this.examples.set([]),
+    // Example questions for the test box: the chosen collection's topics (GET /assistant).
+    effect(() => {
+      const collectionId = this.testCollection();
+      untracked(() =>
+        this.api.assistant(collectionId).subscribe({
+          next: (p) => this.examples.set(p.topics.map((t) => t.examples[0]).filter(Boolean)),
+          error: () => this.examples.set([]),
+        }),
+      );
     });
   }
 
@@ -131,6 +147,13 @@ export class LiveQuality {
     this.expanded.set(this.expanded() === id ? null : id);
   }
 
+  /** Search another collection: the last result belonged to the previous one. */
+  chooseCollection(id: number): void {
+    this.chosenCollection.set(id);
+    this.testResult.set(null);
+    this.testError.set('');
+  }
+
   runTest(question?: string): void {
     const q = (question ?? this.testQuestion()).trim();
     if (q.length < 2 || this.testing()) {
@@ -141,7 +164,7 @@ export class LiveQuality {
     this.testError.set('');
     this.testResult.set(null);
     this.openPassage.set(null);
-    this.api.testQuestion(q).subscribe({
+    this.api.testQuestion(q, this.testCollection()).subscribe({
       next: (r) => {
         this.testing.set(false);
         this.testResult.set(r);

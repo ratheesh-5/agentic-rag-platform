@@ -298,6 +298,8 @@ class OptimizerRun(BaseModel):
 
 class QualityTest(BaseModel):
     question: str = Field(min_length=2, max_length=1000)
+    # The collection to search (like a new chat); the demo collection if not given.
+    collection_id: int = DEFAULT_COLLECTION_ID
 
 
 class TestPassage(BaseModel):

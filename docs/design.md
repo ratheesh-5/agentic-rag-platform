@@ -432,7 +432,9 @@ flowchart LR
   shows a scored answer's numbers under it (production users never see them).
 - **Team testing is kept apart:** answers asked while signed in as admin are marked `by_admin`
   and left out of the numbers unless `?include_admin=true` ("Include admin chats" switch).
-- **Test a question** (`POST /quality/test`, admin): runs the live pipeline on one question and
+- **Test a question** (`POST /quality/test`, admin; optional `collection_id`, default the demo
+  collection, chosen with "Search in" chips above the box - like a new chat it searches only that
+  collection, with its threshold and its example questions): runs the live pipeline on one question and
   scores the answer on the spot (always, not sampled). Nothing is saved. ~5 calls (0 if the
   similarity threshold refuses it first).
 
@@ -540,7 +542,7 @@ endpoints. Expired sessions are removed by the daily retention job. Tests fake t
 | `GET /optimizer/recommendation` · `POST …/{id}/apply` · `POST …/{id}/reject` | admin | The optimizer's latest recommendation and the human decision |
 | `POST /optimizer/runs` · `GET /optimizer/run` | admin | Start the optimizer in the background (optional own test set) · its progress and outcome |
 | `GET /quality/usage[?include_admin=true]` | admin | Live quality from real chats: totals, sampled faithfulness/relevance, every answer with its scores, suggestions, per document |
-| `POST /quality/test` | admin | Answer one test question and score it now; not saved |
+| `POST /quality/test` | admin | Answer one test question (in a chosen collection) and score it now; not saved |
 
 ### What happens to an upload
 

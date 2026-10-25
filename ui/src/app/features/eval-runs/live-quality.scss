@@ -243,8 +243,13 @@
   font: var(--mat-sys-label-medium);
   cursor: pointer;
 
-  &:hover:not(:disabled) {
+  &:hover:not(:disabled),
+  &.on {
     background: var(--mat-sys-secondary-container);
+  }
+
+  &.on {
+    border-color: var(--mat-sys-primary);
   }
 }
 

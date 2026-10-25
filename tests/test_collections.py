@@ -263,3 +263,22 @@ def test_admins_can_override_the_threshold_except_on_the_demo_collection(env):
         ).status_code
         == 422
     )
+
+
+def test_the_admin_test_question_searches_the_chosen_collection(env):
+    # Found by the owner: "Test a question" (Live quality) only searched the demo collection,
+    # so a leave question stayed unanswered although HR policies covers it.
+    client, svc = env
+    upload(client, "handbook.md", HANDBOOK)
+    hr = new_collection(client, "HR policies")
+    upload(client, "leave.md", LEAVE, hr)
+    ask = {"question": "How many days of annual leave do employees get?"}
+    demo = client.post("/quality/test", headers=KEY, json=ask).json()  # default: demo collection
+    assert {p["document"].split("/")[-1] for p in demo["passages"]} == {"handbook.md"}
+    r = client.post("/quality/test", headers=KEY, json=ask | {"collection_id": hr})
+    assert r.status_code == 200, r.text
+    assert {p["document"].split("/")[-1] for p in r.json()["passages"]} == {"leave.md"}
+    assert (
+        client.post("/quality/test", headers=KEY, json=ask | {"collection_id": 999}).status_code
+        == 404
+    )

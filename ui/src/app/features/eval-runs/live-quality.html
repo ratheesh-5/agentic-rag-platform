@@ -93,6 +93,22 @@
       <h3>Test a question</h3>
       <span class="hint">≈ 5 model calls · always scored · not saved</span>
     </div>
+    @if (collections.list().length > 1) {
+      <div class="examples">
+        <span class="muted small">Search in:</span>
+        @for (k of collections.list(); track k.id) {
+          <button
+            class="example"
+            [class.on]="k.id === testCollection()"
+            [attr.aria-pressed]="k.id === testCollection()"
+            (click)="chooseCollection(k.id)"
+            [disabled]="testing()"
+          >
+            <mat-icon inline>{{ k.is_private ? 'lock' : 'folder' }}</mat-icon> {{ k.name }}
+          </button>
+        }
+      </div>
+    }
     <div class="test-input">
       <input
         type="text"
