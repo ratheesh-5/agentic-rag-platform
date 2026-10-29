@@ -56,7 +56,8 @@ import { Collection } from './models';
         />
       </mat-form-field>
       @if (!editing?.is_default) {
-        <mat-form-field appearance="outline" class="full">
+        <!-- dynamic: the two-line hint gets its own space instead of overlapping the checkbox -->
+        <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic">
           <mat-label>Similarity threshold (optional)</mat-label>
           <input
             matInput
@@ -93,6 +94,10 @@ import { Collection } from './models';
     }
     .full {
       width: 100%;
+    }
+    mat-checkbox {
+      display: block;
+      margin-top: 12px;
     }
     .error-text {
       color: var(--mat-sys-error);

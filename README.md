@@ -73,6 +73,51 @@ metrics, the agentic workflow and the optimizer.
   one-click quality checks (also on your own uploaded test set) judged against release gates;
   settings where the optimizer's recommendation is applied or rejected.
 
+## Screenshots
+
+The current UI with a sample workspace: the demo handbook under realistic document and
+collection names. Answers, passages, similarity scores and evaluation results are the real ones
+for these documents; call counts on the Usage page belong to the sample.
+
+**How it fits together** - architecture, then what happens at upload time and at question time
+(more diagrams in [docs/design.md](docs/design.md)):
+
+<p>
+  <img src="docs/img/screenshots/diagram-architecture.jpg" width="32%" alt="Architecture">
+  <img src="docs/img/screenshots/diagram-upload-flow.jpg" width="32%" alt="Upload-time data flow">
+  <img src="docs/img/screenshots/diagram-question-flow.jpg" width="32%" alt="Question-time data flow">
+</p>
+
+**Chat** - one cited answer with its sources; "I don't know" when the documents don't cover a
+question (refused before any AI call); Analyse mode across a whole collection:
+
+![Cited answer with sources](docs/img/screenshots/chat-answer-sources.jpg)
+![Refusal with topic suggestions](docs/img/screenshots/chat-refusal.jpg)
+![Analyse mode](docs/img/screenshots/chat-analyse-mode.jpg)
+
+<img src="docs/img/screenshots/chat-phone.jpg" width="300" alt="Chat on a phone">
+
+**Documents** - collections, upload with incremental indexing, and the prompt-injection scan
+("Check content") on a private collection:
+
+![Documents page after an upload](docs/img/screenshots/documents-upload.jpg)
+![Upload flagged by the prompt-injection scan](docs/img/screenshots/documents-injection-scan.jpg)
+
+**Evaluation** - live quality of real chats (scores, suggestions, playground, per document) and
+test-set checks against the release gates:
+
+![Live quality](docs/img/screenshots/evaluation-live-quality.jpg)
+![Test-set checks](docs/img/screenshots/evaluation-test-set.jpg)
+
+**Settings** - the optimizer's applied recommendation, answer mode, models with quality checks,
+measured settings:
+
+![Settings](docs/img/screenshots/settings.jpg)
+
+**Usage** - every model call: tokens, latency, errors, by purpose and by model, LangSmith links:
+
+![Usage](docs/img/screenshots/usage.jpg)
+
 ## Quick start with Docker
 
 Requires Docker Desktop and a Gemini API key.
