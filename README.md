@@ -89,7 +89,8 @@ for these documents; call counts on the Usage page belong to the sample.
 </p>
 
 **Chat** - one cited answer with its sources; "I don't know" when the documents don't cover a
-question (refused before any AI call); Analyse mode across a whole collection:
+question (an off-topic question is refused before the LLM is called); Analyse mode across a whole
+collection:
 
 ![Cited answer with sources](docs/img/screenshots/chat-answer-sources.jpg)
 ![Refusal with topic suggestions](docs/img/screenshots/chat-refusal.jpg)
