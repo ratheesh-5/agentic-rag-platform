@@ -127,6 +127,7 @@ FAISS index and a new CI gate snapshot) - only as an explicit admin "re-index" a
 | B11 | No audit log of admin actions (upload, delete, apply config) | Append-only audit table + Admin view | P2 |
 | B12 | ✅ Done 2026-10-13: Dependabot (uv, npm, actions, docker) + CI audit job (pip-audit, npm audit); 2 advisories without a fix reviewed and ignored; still open: image scanning (Trivy) (was: no dependency / image scanning) | Dependabot (pip, npm, GitHub Actions, Docker), `pip-audit`, `npm audit`, Trivy in CI | P1 |
 | B13 | Model cost abuse (a guest could drive cost) | Daily/monthly budget caps with alerts (the incident runbook's "cost overrun"), kill switch | P2 |
+| B14 | Direct prompt injection typed into the chat (owner question 2026-11-03): no check on the question text itself. Limited today by design: off-topic text is refused by the similarity threshold before any model call, answers need valid citations (else "I don't know"), the answer step has no tools, no secrets in prompts, collection access decided in code. Still possible: a question that matches the documents could bend an answer's wording or make the model repeat its rules (only the asker sees it) | Input check before answering: simple patterns first (like the B6 upload scan), then optionally a guard/classifier model or the provider's safety filters; log flagged questions (without the text, see D1) for the admin; test set of injection questions in the eval | P2 |
 
 ## C. Performance and optimization
 
