@@ -105,10 +105,16 @@ More diagrams: [docs/design.md](docs/design.md).
 
 ### Chat
 
-![Cited answer with sources](docs/img/screenshots/chat-answer-sources.jpg)
+<table>
+  <tr>
+    <td><img src="docs/img/screenshots/chat-answer-sources.jpg" width="600" alt="Cited answer with sources on a desktop"></td>
+    <td><img src="docs/img/screenshots/chat-phone.jpg" width="230" alt="The same chat on a phone"></td>
+  </tr>
+</table>
 
-*A cited answer built from two documents: the numbers in the text are clickable citations, the
-"2 sources" popup lists the documents and previews each passage.*
+*A cited answer built from two documents - on a desktop and on a phone (the layout adapts; the
+sidebar becomes a ☰ menu). The numbers in the text are clickable citations; the "2 sources" popup
+lists the documents and previews each passage.*
 
 ![Refusal with topic suggestions](docs/img/screenshots/chat-refusal.jpg)
 
@@ -120,10 +126,6 @@ More diagrams: [docs/design.md](docs/design.md).
 *Analyse mode for a question about a whole collection: map-reduce over the documents, one
 combined cited answer, and a note on how many documents were read ("6 documents read, 4 without
 anything on this").*
-
-<img src="docs/img/screenshots/chat-phone.jpg" width="300" alt="Chat on a phone">
-
-*The same chat on a phone - the layout adapts: the sidebar becomes a ☰ menu.*
 
 ### Documents (admin)
 
