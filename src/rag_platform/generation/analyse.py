@@ -1,4 +1,4 @@
-"""Analyse mode (plan C14, phase 3): questions across ALL documents of a collection.
+"""Analyse mode: questions across ALL documents of a collection.
 
 Normal answering takes the top 5 passages - fine for "what is X?", but a question like "compare
 the 2025 and 2026 remote-work policies" or "what is the overall picture of this case?" needs every

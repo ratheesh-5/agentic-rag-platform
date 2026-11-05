@@ -3,7 +3,7 @@
 Used by both POST /ask (single question) and POST /chat (conversation), so the pipeline call and
 the error handling exist exactly once.
 
-SearchCache (C1, production-readiness plan): the FAISS vector index and the BM25 keyword index
+SearchCache: the FAISS vector index and the BM25 keyword index
 stay in memory between requests instead of being loaded from disk / rebuilt from every
 passage's text on each question. Before each use a cheap stamp - number of chunks, highest chunk
 id (ids are never reused) and the FAISS file's modification time - is compared; any upload,

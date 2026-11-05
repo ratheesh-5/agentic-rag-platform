@@ -1,18 +1,20 @@
-# Agentic RAG Platform — Design (Phases 0–7)
+# Agentic RAG Platform — Design
 
 The platform answers questions from a document collection with **cited answers**, says
 **"I don't know"** when the documents don't contain the answer, and **measures its own quality**.
 
-| Phase | What it adds | Status |
-|---|---|---|
-| 0 | Sample corpus: 6 documents of a fictional AI team, "Lumora Labs" | ✅ |
-| 1 | RAG core: index documents, retrieve passages, write cited answers | ✅ |
-| 2 | Evaluation: golden questions, retrieval + abstention metrics, RAGAS | ✅ (full run pending quota) |
-| 3 | Agentic mode: an LLM workflow that plans, grades, rewrites and verifies | ✅ (comparison run pending quota) |
-| 4 | Optimizer: agents run retrieval experiments and propose better settings | ✅ |
-| 5 | REST API: ask, upload/list/delete documents, config, eval runs; admin keys + guest chat | ✅ |
-| 6 | Web UI (Angular): chatbot with memory, admin pages (documents, evaluation, usage, settings) | ✅ |
-| 7 | Observability (LangSmith + usage log), Docker Compose, CI with a quality gate | ✅ |
+| Part | What it does |
+|---|---|
+| Indexing | Splits PDF, DOCX, Markdown and text documents into passages, embeds them, keeps SQLite + FAISS in sync |
+| Answering | Fast, agentic (LangGraph: plan, grade, rewrite, verify) or auto mode; cited answers or "I don't know" |
+| Evaluation | Golden questions, span-based retrieval metrics, abstention, RAGAS, release gates, live scoring of real chats |
+| Optimizer | Agents run retrieval experiments and propose better settings; a person approves |
+| REST API | FastAPI: chat with memory, documents and collections, settings, evaluation, usage; guests, Google sign-in, admin keys |
+| Web UI | Angular chat + admin pages (documents, evaluation, usage, settings) |
+| Operations | LangSmith + usage log, JSON request log, health checks, Docker Compose, CI with a quality gate |
+
+The demo data is a fictional company handbook ("Lumora Labs", 6 documents in
+`data/sample_corpus/`); the platform itself knows nothing about the domain.
 
 ---
 
@@ -67,7 +69,7 @@ flowchart TD
 - Re-running `rag ingest` costs nothing for unchanged documents. A deleted file is removed from
   the index.
 
-### Collections - one search index per collection (2026-10-24, plan section I phase 1)
+### Collections - one search index per collection
 
 Documents belong to a **collection** ("AI Engineering Handbook", "HR policies"); a chat searches
 exactly one collection, so unrelated domains never mix.
@@ -81,8 +83,8 @@ flowchart LR
     I2 --> A
 ```
 
-- **Data:** table `collections` (name, description, `owner` - empty = shared; phase 2 adds
-  private ones); `documents.collection_id` and `conversations.collection_id` (added by a
+- **Data:** table `collections` (name, description, `owner` - empty = shared,
+  otherwise the private owner); `documents.collection_id` and `conversations.collection_id` (added by a
   migration; rows from before collections belong to collection 1).
 - **Isolation by construction:** each collection has its **own FAISS file**
   (`Settings.collection_index_path`: collection 1 keeps `data/index/faiss.index`, others
@@ -94,8 +96,7 @@ flowchart LR
   index to filter (a filter bug would leak; separate files can't).
 - **Collection 1 = the demo collection:** the golden set belongs to it, so evaluation, the
   quality check, the optimizer and the CI gate work on it, unchanged; it can be renamed but not
-  deleted. Optimizer re-indexing touches only it (one chunking setting for all collections until
-  phase 4).
+  deleted. Optimizer re-indexing touches only it (one chunking setting for all collections).
 - **Chats:** a new conversation takes the collection picked on the welcome screen
   (`collection_id` in `POST /chat`); follow-ups always search the conversation's own collection.
 - **Similarity threshold per collection** (`retrieval/calibration.py`): scores depend on the
@@ -107,14 +108,13 @@ flowchart LR
   above. Precedence: demo collection = its measured value from `rag_config.json` (0.68, stricter
   because its test set has near-topic questions) > admin override (collection dialog) >
   automatic > global value. Limit: a near-topic question the documents don't answer passes the
-  probe threshold; the model then abstains (one chat call). Phase 4 adds measured values from
-  test sets for every collection.
+  probe threshold; the model then abstains (one chat call).
 - **"Found in another collection"** (chat): after a threshold refusal the server checks the other
   collections with the same question (one embedding, no chat call) against their own thresholds
   and the answer lists them (`found_in`); the UI offers "Ask in <collection>" (a new chat there).
   The sidebar shows each chat's collection once chats come from 2+ collections; a new chat shows
   "Searching in <collection>" above the question box.
-- **Private collections (phase 2, 2026-10-24):** any signed-in user can create collections of
+- **Private collections:** any signed-in user can create collections of
   their own (`owner` = the user's owner hash), upload into them and ask questions; nobody else
   sees them. One rule in `api/deps.py` decides every access: `can_see` (shared, or the caller
   owns it) and `can_manage` (shared: admins; private: only the owner - **not admins**).
@@ -242,7 +242,7 @@ Cost: about **4 LLM calls** per question, roughly 2× the latency of fast mode.
 All modes are exposed the same way (`question → answer`), so the CLI, evaluation and the API
 don't care which one runs.
 
-### Auto mode - fast first, agentic when needed (2026-10-22)
+### Auto mode - fast first, agentic when needed
 
 ```mermaid
 flowchart TB
@@ -268,7 +268,7 @@ many questions were escalated. Admins switch the mode directly in Admin › Sett
 (`PUT /config/mode`); optimizer recommendations ignore the mode (they measure search only) and
 applying one keeps the current mode.
 
-### Answer model - Gemini and Groq with automatic fallback (2026-10-24, plan G2/G3/G5)
+### Answer model - Gemini and Groq with automatic fallback
 
 The chat model the whole app uses is `llm.FallbackChat`: Gemini, plus Groq when `GROQ_API_KEY`
 is set. Admin › Settings › **Answer model** picks which one writes answers first and whether the
@@ -280,7 +280,7 @@ flowchart LR
     Q([AI call]) --> P[Chosen provider<br/>e.g. Gemini]
     P -->|answer| OK([Done])
     P -->|"quota (429) · overloaded (503/504) · timeout"| F{fallback on?}
-    F -->|yes| B[Its backup model<br/>if chosen, plan G7] -->|still failing| G[Other provider<br/>e.g. Groq] --> OK
+    F -->|yes| B[Its backup model<br/>if chosen] -->|still failing| G[Other provider<br/>e.g. Groq] --> OK
     F -->|no| E([429 / 503 to the user])
     P -->|any other error| X([Raised - a bug is not hidden])
 ```
@@ -297,7 +297,7 @@ flowchart LR
   ~2,000 tokens) - `GROQ_REQUESTS_PER_MINUTE` 5. `GET /config/providers` shows which providers
   have a key (never the key); the usage log names the model of every call.
 
-### Model choice - answer, backup and judge models in Settings (2026-10-25, plan G7)
+### Model choice - answer, backup and judge models in Settings
 
 Admin › Settings › **Models** (`api/models.py`, UI `features/settings/models-card.ts`) chooses the
 models without editing `.env` or restarting. Stored in `rag_config.json` (`gemini_model`,
@@ -329,7 +329,7 @@ them.
 - **Embedding model:** shown locked. A change means re-embedding every document (vectors of two
   models can't be compared) and re-exporting the CI snapshot - a deliberate `.env` change.
 
-### Analyse mode - every document of a collection (2026-10-24, plan C14 / phase 3)
+### Analyse mode - every document of a collection
 
 Fast and agentic mode read the top 5 passages - often from one or two documents. A question like
 "compare the 2025 and 2026 policies" or "what is the overall picture?" needs every document, so
@@ -379,7 +379,7 @@ flowchart LR
 ```
 
 Labels point at **text positions, not chunk ids**, so the same golden set still works when chunk
-size changes. The Phase 4 optimizer depends on that.
+size changes. The optimizer depends on that.
 
 ### What happens per question
 
@@ -432,7 +432,7 @@ abstention accuracy ≥ 0.90, faithfulness ≥ 0.90, answer correctness ≥ 0.80
 and P95 latency are warnings). `evaluation/gates.py` checks a run against them: pass / fail /
 warn, or **n/a** when the run didn't measure the metric (a retrieval-only run has no answers,
 so it is judged on Recall@5 and MRR only). The UI shows the result per run; the CI gate
-(Phase 7) will reuse the same file.
+uses the same file.
 
 ### Online evaluation — quality from real chats (no test data)
 The golden set needs an answer key. Two RAGAS metrics don't: **faithfulness** (is every claim
@@ -536,7 +536,7 @@ Callers (no registration form; checked in this order by `deps.current_caller`):
 
 | Caller | Sends | Can use |
 |---|---|---|
-| **Signed-in user** (Sign in with Google, plan B1) | `Authorization: Bearer <session token>` from `POST /auth/google` | Chat endpoints and `GET /me`; chats on every device; `USER_QUESTIONS_PER_HOUR` (50) per user. **Admin** (everything) when the email is in `ADMIN_EMAILS` |
+| **Signed-in user** (Sign in with Google) | `Authorization: Bearer <session token>` from `POST /auth/google` | Chat endpoints and `GET /me`; chats on every device; `USER_QUESTIONS_PER_HOUR` (50) per user. **Admin** (everything) when the email is in `ADMIN_EMAILS` |
 | **Admin by key** | `X-API-Key`: one of `API_KEYS` in `.env` | Everything (scripts, CLI tools, the UI fallback when Google sign-in is off) |
 | **Guest** (end user) | `X-Guest-Id`: a random id the browser generated once | Chat endpoints and `GET /me`; at most `GUEST_QUESTIONS_PER_HOUR` (20) questions per IP |
 
@@ -602,7 +602,7 @@ flowchart TD
   or search method (403), and the hourly limit per IP protects the model quota (429 +
   `Retry-After`). `GUEST_QUESTIONS_PER_HOUR=0` turns guest access off.
 - **File names** are reduced to a safe base name, so `../../etc/passwd.md` becomes `passwd.md`.
-- **Prompt-injection scan (plan B6, layer 2):** `uploads.suspicious_lines` matches order-like
+- **Prompt-injection scan:** `uploads.suspicious_lines` matches order-like
   phrases aimed at an AI ("ignore all previous instructions", "you are now a...", "reveal your
   system prompt", "do not tell the user", "new instructions:", chat-template tokens such as
   `<|im_start|>`). It only **warns**: the document is indexed, `DocumentInfo.warnings` lists up to
@@ -653,7 +653,7 @@ flowchart TD
   admin key) that created it, stored as a hash. Anyone else gets "not found", exactly as if the
   conversation did not exist. The UI always sends its guest id, so signing in as admin keeps the
   browser's own history.
-- **Data retention (plan B10):** `api/retention.py` runs at startup and daily (an asyncio task
+- **Data retention:** `api/retention.py` runs at startup and daily (an asyncio task
   started by the FastAPI lifespan; the SQLite work in a worker thread): conversations whose last
   activity is older than `CHAT_RETENTION_DAYS` (90) are deleted with their messages, feedback
   and online scores (ON DELETE CASCADE), usage-log rows older than `USAGE_RETENTION_DAYS` (90)
@@ -709,7 +709,7 @@ flowchart LR
   screen shows the hand-written topics as cards and every other document as one compact chip in
   "More documents (N)" (8 visible + "+N more"), so 100 uploads don't mean 100 cards. After a
   refusal, 6 topic chips + "+N more".
-- **Sources** (2026-10-24): one **"N sources"** button on the right of the answer's action row
+- **Sources**: one **"N sources"** button on the right of the answer's action row
   (opens on hover or click) instead of a row of chips, so many documents don't clutter the chat.
   The popup lists each document once (icon, readable name, type) with its citation numbers - the
   same numbers as the `[n]` badges in the text; pointing at a number previews its passage inside
@@ -745,7 +745,7 @@ flowchart LR
   "Monday, October 11") goes above the first message of each day, like Teams.
 - **No registration:** visitors chat right away as guests. The browser creates a random guest id
   once (`localStorage`), so their history survives reloads on that browser.
-- **Sign in with Google (plan B1):** when `GET /auth/config` returns a client id, the toolbar
+- **Sign in with Google:** when `GET /auth/config` returns a client id, the toolbar
   shows Google's button (`core/google-sign-in.ts` loads Google Identity Services once; the user
   signs in on Google's page). Its ID token goes to `POST /auth/google`; the session (token, expiry, role, name, email,
   photo) is kept in `localStorage` (`rag.session`, 7 days) and sent as `Authorization: Bearer`.
@@ -766,7 +766,7 @@ flowchart LR
 
 ---
 
-## 10. Observability, Docker and CI (Phase 7)
+## 10. Observability, Docker and CI
 
 ```mermaid
 flowchart LR
@@ -791,7 +791,7 @@ flowchart LR
   LangGraph's node name (`agent: grade`) or the model's default (`judge`). Logging failures are
   swallowed. Cost only for models priced in `model_prices.json` (no real prices hard-coded).
   The run id is LangSmith's run id, so Admin › Usage links each call to its trace.
-- **Application log (plan D1):** `rag serve` passes `LOG_CONFIG` to uvicorn: JSON lines on
+- **Application log:** `rag serve` passes `LOG_CONFIG` to uvicorn: JSON lines on
   stdout (`JsonFormatter`), our loggers and uvicorn at INFO, other libraries at WARNING (HTTP
   clients log request URLs). A middleware gives each request an id (the caller's `X-Request-ID`
   if it matches `[A-Za-z0-9-]{8,64}`, else a new one; returned in the response) and logs
@@ -810,12 +810,12 @@ flowchart LR
   from the nginx container's fixed address (`FORWARDED_ALLOW_IPS`), so the guest rate limit
   counts per user and can't be dodged with a fake IP. Index, uploads and
   `rag_config.json` are bind-mounted; secrets come from `.env` via `env_file`, never the image.
-- **Health checks (plan D2):** `/health` = liveness (the process runs); `/ready` = readiness
+- **Health checks:** `/health` = liveness (the process runs); `/ready` = readiness
   (config loads, SQLite answers, the FAISS index loads into the search cache; a missing model key
   already fails at startup with 503). No model call, so the 30-second Docker healthcheck costs no
   quota. Compose marks the API `healthy`/`unhealthy` (Python's urllib, the slim image has no
   curl), starts the UI only after the API is healthy, and checks nginx with busybox `wget`.
-- **Security basics (plan B3-B6, B12):** both containers run as normal users (API uid 10001,
+- **Security basics:** both containers run as normal users (API uid 10001,
   nginx-unprivileged on 8080) with `no-new-privileges` and no Linux capabilities; the code in
   the image is read-only for the app. API port 8000 is published on 127.0.0.1 only. nginx sends
   security headers (Content-Security-Policy, nosniff, no framing, referrer and permissions
@@ -852,7 +852,7 @@ change that alters the indexed texts; `--update-baseline` records accepted new n
 | Incremental indexing + embedding cache | Re-indexing costs only what changed |
 | Citations validated in code, abstention at 3 points | Never trust model output blindly; prefer "I don't know" to a wrong answer |
 | Partial answers allowed, abstain only when no requested fact is in the passages | Broad questions get a useful, cited answer that says what is missing, instead of a refusal |
-| One `question → answer` interface for both modes | Same evaluation and future API for fast and agentic |
+| One `question → answer` interface for both modes | Same evaluation and API for fast and agentic |
 | Evidence spans instead of chunk ids | Metrics stay comparable across chunking settings |
 | RAGAS for answer quality, plain code for retrieval/abstention | Standard LLM-judge metrics + exact, free metrics for CI and the optimizer |
 | Loop limits and budgets in code | An agent must always terminate and stay within cost |
@@ -863,28 +863,17 @@ change that alters the indexed texts; `--update-baseline` records accepted new n
 | Quality checks in the UI are retrieval-only; full evaluations stay in the CLI | Seconds and no quota for the button; hundreds of judge calls stay a deliberate choice |
 | Release gates in a JSON file, "n/a" when a run can't measure a metric | One source for UI and CI; a search-only run is never failed on answer metrics |
 | Online evaluation: reference-free RAGAS metrics on a 1-in-5 sample, in the background | Quality of real usage without writing test data; bounded cost; no wait for users |
-| No per-document test generation | Production practice: one curated test set for releases + monitoring of real usage; generated questions are easier than real ones. A human-reviewed draft helper is plan item C13 |
+| No per-document test generation | Production practice: one curated test set for releases + monitoring of real usage; generated questions are easier than real ones. |
 | Experiments are retrieval-only | Many experiments for almost no API cost |
 | API: keys required, uploads validated by content, writes serialized | Safe by default; no half-written index |
 | UI is a separate Angular app using only the REST API | One contract; front end and back end evolve and deploy independently |
-| Memory by rewriting follow-ups, conversations in SQLite per guest id / key | Works for every pipeline mode; costs one call only for follow-ups; private per user |
+| Memory by rewriting follow-ups, conversations in SQLite per user / guest id | Works for every pipeline mode; costs one call only for follow-ups; private per user |
 | Topics and example questions in `assistant.json`, not in the UI | New users learn what to ask; another knowledge base only needs another file |
-| Guests chat without registration; admins sign in with a key | Feels like a real chatbot; knowledge base and evaluation stay with operators; guest limit protects the quota |
+| Guests chat without registration; users and admins sign in with Google (admin keys for scripts) | Feels like a real chatbot; knowledge base and evaluation stay with operators; guest limit protects the quota |
 | Developer details only in development builds | Production users see a clean chatbot |
 | LangSmith for traces, a local SQLite log for usage | Deep debugging in a hosted tool; numbers that work offline and never depend on an account |
 | API traced, CLI batch runs only on request | Stays inside the free plan's monthly trace allowance |
 | CI gate on a committed embedding snapshot | Deterministic and free on every push: no API key, no quota, no flaky network |
-| Docker Compose locally, no cloud yet | One-command start; the same images can move to any container platform later |
-| Collections with one search index each (not one index + a filter) | Isolation by construction - the base for private per-user collections (phase 2); deleting a collection is deleting a file |
+| Docker Compose | One-command start; the same images can move to any container platform later |
+| Collections with one search index each (not one index + a filter) | Isolation by construction - the base for private per-user collections; deleting a collection is deleting a file |
 
----
-
-## 12. Open items and next steps
-
-- **Pending (needs API quota):** full fast baseline with RAGAS and the fast-vs-agentic
-  comparison. Retrieval-only baselines over all 50 questions are done: dense Recall@5 0.988 and
-  MRR 0.850, hybrid 1.000 and 0.881. The data suggests a safe threshold of 0.68 instead of 0.35.
-  To decide it in the UI: Admin › Settings › Run optimizer (or `uv run rag optimize --decision later`).
-- **Possible next steps:** a separate `JUDGE_MODEL` (own rate limit and quota for scoring);
-  Google/Microsoft sign-in instead of admin keys; a cloud deployment of the Docker images
-  (e.g. Azure Container Apps); the CORS default could also allow `127.0.0.1:4200`.

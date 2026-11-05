@@ -1,4 +1,4 @@
-"""Tests for the answer model (plan G2/G3/G5): Gemini and Groq in the order chosen in
+"""Tests for the answer model: Gemini and Groq in the order chosen in
 Admin › Settings, with automatic fallback when a provider is out of quota or overloaded.
 
 Fake models only (conftest.FakeLlm, which can raise a scripted provider error); no API calls.

@@ -1,4 +1,4 @@
-# API image: FastAPI + the RAG platform (Phase 7).
+# API image: FastAPI + the RAG platform.
 #   docker compose up        (see docker-compose.yml; builds this and the UI image)
 #
 # Layers are ordered so that a code change does not reinstall the dependencies: first only
@@ -29,7 +29,7 @@ RUN uv sync --frozen --no-dev
 # Runtime data (index, uploads) lives in volumes, see docker-compose.yml. Secrets come from
 # the environment (env_file), never from the image.
 
-# Run as a normal user, not root (security plan B4): if someone ever broke into the app, they
+# Run as a normal user, not root: if someone ever broke into the app, they
 # couldn't change the image's files or install anything. The code stays root-owned and
 # read-only for this user; it writes only to the mounted data folders. HOME=/tmp gives
 # libraries a writable place for caches.

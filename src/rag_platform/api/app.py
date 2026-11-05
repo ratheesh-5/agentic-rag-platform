@@ -37,7 +37,7 @@ FastAPI (like ASP.NET Core minimal APIs): a decorator binds a function to a rout
 come from the path, query, body (pydantic model) or `Depends(...)`; the return value is
 serialized through `response_model`.
 
-Request log (plan D1): a middleware gives every request an id (the caller's X-Request-ID if it
+Request log: a middleware gives every request an id (the caller's X-Request-ID if it
 looks safe, else a new one), returns it in the X-Request-ID response header and writes one JSON
 line per request (method, path, status, ms, which credential was sent - never its value, never
 the question). See observability.py for the log format.
@@ -119,7 +119,7 @@ from rag_platform.observability import request_id
 async def lifespan(_app: FastAPI):
     """Startup / shutdown (.NET: IHostedService.StartAsync / StopAsync). Code before `yield` runs
     when the server starts, code after it when it stops. Tests' TestClient(app) skips it."""
-    cleanup = asyncio.create_task(retention.run_daily(Settings()))  # plan B10, once a day
+    cleanup = asyncio.create_task(retention.run_daily(Settings()))  # once a day
     yield
     cleanup.cancel()
 
@@ -201,7 +201,7 @@ def health() -> dict:
 
 @app.get("/ready", tags=["system"])
 def ready(response: Response, svc: Services = Depends(get_services)) -> dict:
-    """Readiness (plan D2): can this instance answer questions right now?
+    """Readiness: can this instance answer questions right now?
 
     Liveness vs readiness - the split Kubernetes and cloud container platforms use (.NET:
     MapHealthChecks with tagged checks): /health only proves the process runs; /ready also
@@ -299,7 +299,7 @@ def me(caller: Caller = Depends(current_caller)) -> Me:
 def delete_my_account(
     caller: Caller = Depends(current_caller), svc: Services = Depends(get_services)
 ) -> None:
-    """ "Delete my account" (privacy, plan B10 + section I): the signed-in user's private
+    """ "Delete my account" (privacy): the signed-in user's private
     collections (documents, search indexes, files), their chats and the account with its
     sessions. Shared collections are untouched. Signing in again later starts from zero."""
     owner = private_owner(caller)
@@ -532,7 +532,7 @@ def chat_providers(svc: Services = Depends(get_services)) -> list[ChatProvider]:
 
 @api.put("/config/model", response_model=RagConfig, tags=["system"])
 def set_model(body: ModelChange, svc: Services = Depends(get_services)) -> RagConfig:
-    """Answer model (plan G3): which provider writes answers first and whether the other one
+    """Answer model: which provider writes answers first and whether the other one
     takes over when it is out of quota or overloaded. Applies from the next question."""
     if body.chat_provider not in llm.chat_providers(svc.settings):
         raise HTTPException(422, f"{body.chat_provider} is not set up on the server (API key)")

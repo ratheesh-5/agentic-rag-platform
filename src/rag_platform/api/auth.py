@@ -1,4 +1,4 @@
-"""Sign in with Google (security plan B1): users get their chats on every device, admins are
+"""Sign in with Google: users get their chats on every device, admins are
 named people instead of "whoever has the key".
 
 The flow (OpenID Connect, the identity layer on top of OAuth 2.0):

@@ -1,11 +1,11 @@
-# The whole platform with one command (Phase 7):
+# The whole platform with one command:
 #   docker compose up --build        UI: http://localhost:8080   API: http://localhost:8000/docs
 #   UI_PORT=8081 docker compose up   (if 8080 is taken by another app)
 #
 # The UI calls the API through nginx (http://localhost:8080/api/...), so no CORS is needed and a
 # local `rag serve` on port 8000 doesn't interfere.
 #
-# Security (plan B4/B5): both containers run as normal users with no extra Linux privileges;
+# Security: both containers run as normal users with no extra Linux privileges;
 # the API port is published on this machine only (127.0.0.1) for /docs and tools - other
 # computers reach the API only through nginx; the API trusts X-Forwarded-For only from the
 # nginx container, so nobody can fake their IP to dodge the guest question limit.
@@ -34,7 +34,7 @@ services:
     security_opt: ["no-new-privileges:true"]  # no privilege escalation (e.g. setuid binaries)
     cap_drop: [ALL]                           # no special Linux capabilities needed
     restart: unless-stopped
-    # Health check (plan D2): `docker ps` shows healthy / unhealthy instead of just "Up".
+    # Health check: `docker ps` shows healthy / unhealthy instead of just "Up".
     # /ready checks config, database and search index (no AI call, so no quota is used).
     # Python's urllib instead of curl: the slim image has no curl; a 503 raises -> exit 1.
     healthcheck:

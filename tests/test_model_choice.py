@@ -1,4 +1,4 @@
-"""Tests for Admin › Settings › Models (plan G7): models chosen by name, a backup model of the
+"""Tests for Admin › Settings › Models: models chosen by name, a backup model of the
 same provider, the model lists, Test, the quality check before use and the judge per score.
 
 Fake models only (conftest.FakeLlm and a tiny echo model); the providers' model lists are

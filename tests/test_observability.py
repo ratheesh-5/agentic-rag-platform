@@ -1,4 +1,4 @@
-"""Tests for observability (Phase 7): the usage log callback, embedding logging, the usage
+"""Tests for observability: the usage log callback, embedding logging, the usage
 report and the LangSmith switch. No API calls: LangChain results are faked."""
 
 import os

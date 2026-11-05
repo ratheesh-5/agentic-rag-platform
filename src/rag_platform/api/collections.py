@@ -1,4 +1,4 @@
-"""Collections (plan section I): named groups of documents - shared or private.
+"""Collections: named groups of documents - shared or private.
 
     GET    /collections                  the collections the caller may search (open)
     GET    /collections/private-summary  totals over all private collections (admin)
@@ -11,7 +11,7 @@ A chat picks one collection and only ever searches it: each collection has its o
 file and its own BM25 keyword index (Settings.collection_index_path, SearchCache), so isolation
 holds by construction, not by filtering results afterwards.
 
-Shared vs private (phase 2, rules in deps.can_see / can_manage):
+Shared vs private (rules in deps.can_see / can_manage):
 - shared collections are managed by admins and searchable by everyone, guests included;
 - any signed-in user can create PRIVATE collections, upload into them and ask questions; nobody
   else sees them - other users get 404 (as if they didn't exist), admins only see totals

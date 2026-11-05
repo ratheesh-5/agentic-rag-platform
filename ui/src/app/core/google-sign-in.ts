@@ -51,7 +51,7 @@ function loadGoogleIdentity(): Promise<GoogleIdentity> {
 }
 
 /**
- * "Sign in with Google" button (plan B1). Google draws the button and runs the sign-in on its
+ * "Sign in with Google" button. Google draws the button and runs the sign-in on its
  * own pages (we never see a password) and hands us an ID token; the API checks it and returns
  * our own session, stored in ApiKeyStore. Shown only when the API reports a client id.
  */

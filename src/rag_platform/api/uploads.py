@@ -11,7 +11,7 @@ Every uploaded file is checked before it touches the disk:
 Plain functions raising UploadError, so they are unit-testable without a web server. The API
 maps UploadError.status to the HTTP status code (413 too large, 415 type, 422 content).
 
-Prompt-injection scan (security plan B6, layer 2): `suspicious_lines` finds text written to
+Prompt-injection scan: `suspicious_lines` finds text written to
 give orders to an AI ("ignore all previous instructions", "you are now ...", "reveal your system
 prompt", chat-template tokens). Layer 1 is the prompt rule UNTRUSTED_PASSAGES (passages are
 data, never instructions). The scan only WARNS - the document is indexed and the admin decides:

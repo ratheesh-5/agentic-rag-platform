@@ -170,7 +170,7 @@ class ExperimentRunner:
         Returns True if a re-index happened (it reuses cached vectors: no embedding calls)."""
         reindex = self.main.chunkers(DEFAULT_COLLECTION_ID) != {self._chunker(cfg)}
         save_rag_config(cfg, config_path)
-        if reindex:  # the demo collection; other collections keep their chunking (phase 4)
+        if reindex:  # the demo collection; other collections keep their chunking
             docs = [Path(p) for p in self.main.document_paths(DEFAULT_COLLECTION_ID)]
             ingest(docs, self.main, self.s.faiss_path, self.embedder, self.s.embedding_model, cfg)
         return reindex

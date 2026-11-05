@@ -6,7 +6,7 @@ Two kinds of settings, kept separate on purpose:
   environment variables / the `.env` file. .NET analogy: `IConfiguration` + `appsettings.json`
   / user secrets, bound to an options class.
 - `RagConfig` - the tunable knobs of the RAG pipeline (chunk size, top-k, thresholds). These are
-  what evaluation measures and the optimizer (Phase 4) changes, so every eval run stores the
+  what evaluation measures and the optimizer changes, so every eval run stores the
   exact RagConfig it used. Keeping them in one immutable object makes runs reproducible.
 """
 
@@ -17,7 +17,7 @@ from typing import Literal  # Literal["a", "b"] = a string restricted to these v
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# The demo collection (plan section I): every database has it; documents from before collections
+# The demo collection: every database has it; documents from before collections
 # live in it, and evaluation, the optimizer and the CI gate work on it. Its search index keeps the
 # original file name (Settings.faiss_path).
 DEFAULT_COLLECTION_ID = 1
@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     chat_max_retries: int = 2
     # Client-side cap on texts embedded per minute (free tier: 100/min, each text counts).
     embed_requests_per_minute: int = 90
-    # Second chat provider (plan G2/G5): Groq, used as the main model or as the automatic
+    # Second chat provider: Groq, used as the main model or as the automatic
     # fallback when Gemini is out of quota or overloaded (chosen in Admin › Settings, stored in
     # rag_config.json). Empty key = Groq is off. Only CHAT moves; embeddings stay on Gemini.
     groq_api_key: str = ""
@@ -63,13 +63,13 @@ class Settings(BaseSettings):
     # minute per model, and one answer prompt is ~2,000 tokens - so about 4 calls a minute.
     groq_requests_per_minute: int = 5
     index_dir: Path = Path("data/index")  # SQLite db + FAISS index
-    # REST API (Phase 5): comma-separated ADMIN keys accepted in the X-API-Key header (documents,
+    # REST API: comma-separated ADMIN keys accepted in the X-API-Key header (documents,
     # evaluation, settings, /ask). Empty = admin endpoints refuse every request (503).
     api_keys: str = ""
     # Guests (no key) may chat; each guest browser/IP gets this many questions per hour.
     # 0 = guests disabled (chat then needs an admin key too).
     guest_questions_per_hour: int = 20
-    # Sign in with Google (security plan B1). The OAuth client id of THIS app (Google Cloud
+    # Sign in with Google. The OAuth client id of THIS app (Google Cloud
     # Console > Credentials; public, not a secret). Empty = Google sign-in off: the UI falls back
     # to the admin-key dialog. Users sign in with their own Google account; admins are the
     # signed-in users whose email is in ADMIN_EMAILS (comma-separated). API keys keep working
@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     admin_emails: str = ""
     session_days: int = 7  # how long a sign-in lasts (our own session, not Google's 1-h token)
     user_questions_per_hour: int = 50  # per signed-in user (guests: GUEST_QUESTIONS_PER_HOUR)
-    # Private collections (plan section I, phase 2): what one signed-in user may store. Protects
+    # Private collections: what one signed-in user may store. Protects
     # the shared embedding quota and the disk; uploads beyond a limit are refused BEFORE any
     # embedding call.
     user_max_collections: int = 5
@@ -87,12 +87,12 @@ class Settings(BaseSettings):
     # Online evaluation: share of chat answers scored in the background for faithfulness and
     # relevance (0.2 = 1 in 5; 0 = off). ~3-4 judge calls per scored answer.
     online_eval_sample_rate: float = 0.2
-    # Data retention (plan B10): conversations without activity for this many days are deleted
+    # Data retention: conversations without activity for this many days are deleted
     # (with their messages, feedback and scores), and usage-log rows older than this. Checked
     # when the API starts and then daily. 0 = keep forever.
     chat_retention_days: int = 90
     usage_retention_days: int = 90
-    # LangSmith tracing (Phase 7, optional): copied to the environment by
+    # LangSmith tracing (optional): copied to the environment by
     # observability.configure_tracing so LangChain sends traces. Off unless both are set.
     # The API traces; CLI batch runs only with --trace-langsmith.
     langsmith_tracing: bool = False
@@ -150,24 +150,24 @@ class RagConfig(BaseModel, frozen=True):
     # Retrieval: how many of the most similar chunks are given to the LLM as context.
     top_k: int = 5
     # "dense" = vector similarity only. "hybrid" = vector + BM25 keyword search merged with
-    # Reciprocal Rank Fusion; helps with exact terms (codes, names, table rows) (Phase 4).
+    # Reciprocal Rank Fusion; helps with exact terms (codes, names, table rows).
     retrieval: Literal["dense", "hybrid"] = "dense"
     hybrid_candidates: int = 20  # hybrid: candidates taken from EACH retriever before fusion
     # Abstention: if even the best chunk's cosine similarity is below this, answer "I don't
-    # know" without calling the LLM. Must be calibrated per embedding model (Phase 2).
+    # know" without calling the LLM. Must be calibrated per embedding model.
     similarity_threshold: float = 0.35
     # Pipeline: "fast" = retrieve -> generate (1 LLM call). "agentic" = LangGraph workflow with
-    # query planning, relevance grading, query rewrites and answer verification (Phase 3).
+    # query planning, relevance grading, query rewrites and answer verification.
     # "auto" = fast first; agentic only when the fast answer struggled (see answering.py).
     mode: Literal["fast", "agentic", "auto"] = "fast"
     max_rewrites: int = 2  # agentic: query rewrites when no relevant passage is found
     max_regenerations: int = 1  # agentic: answer regenerations requested by the verifier
-    # Answer model (plan G2/G3), chosen in Admin › Settings: the provider that writes answers
+    # Answer model, chosen in Admin › Settings: the provider that writes answers
     # first, and whether the other one takes over when it is out of quota, overloaded or too
     # slow (see llm.FallbackChat). Embeddings always stay on Gemini.
     chat_provider: Literal["gemini", "groq"] = "gemini"
     chat_fallback: bool = True
-    # Models chosen in Admin › Settings › Models (plan G7); empty = the .env default
+    # Models chosen in Admin › Settings › Models; empty = the .env default
     # (CHAT_MODEL, GROQ_MODEL, JUDGE_MODEL). The embedding model is NOT here: changing it means
     # re-indexing every document, so it stays a deliberate .env change.
     gemini_model: str = ""
@@ -194,7 +194,7 @@ ADMIN_CHOICES = (
 
 
 # The ACTIVE pipeline config, versioned in git (like appsettings.json). Every command starts from
-# it; the optimizer (Phase 4) rewrites it after human approval. Missing file = code defaults.
+# it; the optimizer rewrites it after human approval. Missing file = code defaults.
 RAG_CONFIG_FILE = Path("rag_config.json")
 
 

@@ -29,7 +29,7 @@ interface Row {
 }
 
 /**
- * Admin › Settings › Models (plan G7): choose the answer models, a backup model per provider and
+ * Admin › Settings › Models: choose the answer models, a backup model per provider and
  * the judge from the providers' current model lists - no .env edit, no restart.
  *
  * A new answer or backup model must pass a quality check first (a few demo questions answered

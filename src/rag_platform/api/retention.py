@@ -1,4 +1,4 @@
-"""Data retention (plan B10): personal data is not kept forever.
+"""Data retention: personal data is not kept forever.
 
 Chat questions can contain personal details, and the usage log records who used the models when.
 Privacy rules (GDPR, India's DPDP Act) expect data to be kept only as long as it is needed, and

@@ -1,4 +1,4 @@
-"""Tests for the Phase 4 optimizer: the experiment runner (tool) and the multi-agent graph.
+"""Tests for the optimizer: the experiment runner (tool) and the multi-agent graph.
 
 The graph test scripts every LLM decision (diagnosis, tool calls, report) with FakeLlm and the
 experiments run for real on a tiny corpus with the fake embedder - no API calls. It checks the

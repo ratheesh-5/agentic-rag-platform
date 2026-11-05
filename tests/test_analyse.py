@@ -1,4 +1,4 @@
-"""Tests for Analyse mode (plan C14, phase 3): a question answered from EVERY document of a
+"""Tests for Analyse mode: a question answered from EVERY document of a
 collection with map-reduce (one AI call per document + one to combine).
 
 Checked: one map call per document with global [P] labels, the combined answer's citations,

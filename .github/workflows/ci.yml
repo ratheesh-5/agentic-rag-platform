@@ -1,4 +1,4 @@
-# CI (Phase 7): every push and pull request is linted, tested, quality-gated and built.
+# CI: every push and pull request is linted, tested, quality-gated and built.
 # All jobs run in parallel on GitHub's Linux machines. No secrets are required:
 # - unit tests use fake models (never a real API),
 # - the quality gate uses the committed embedding snapshot (data/eval/embedding_snapshot.db).

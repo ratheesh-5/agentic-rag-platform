@@ -1,4 +1,4 @@
-"""CI evaluation gate (Phase 7): fail the build when retrieval quality drops.
+"""CI evaluation gate: fail the build when retrieval quality drops.
 
 `rag gate` builds a fresh index of the sample corpus in a temp folder, runs the retrieval-only
 evaluation of the golden set with the ACTIVE rag_config.json, and fails (exit code 1) if:

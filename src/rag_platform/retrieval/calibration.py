@@ -1,4 +1,4 @@
-"""Similarity threshold per collection, set automatically (plan section I, phase 1).
+"""Similarity threshold per collection, set automatically.
 
 Why: the threshold decides "is anything in these documents about this question?" before any
 chat call (below it: "I couldn't find this", free and safe). Scores depend on the documents -

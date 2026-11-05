@@ -1,4 +1,4 @@
-"""Admin › Settings › Models (plan G7): choose the answer and judge models without editing .env.
+"""Admin › Settings › Models: choose the answer and judge models without editing .env.
 
     GET  /config/models          current / default / backup model per slot, the model lists,
                                  the embedding model (read-only) and the latest quality checks

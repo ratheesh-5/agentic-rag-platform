@@ -203,7 +203,7 @@ def list_conversations(
 def delete_all_conversations(
     svc: Services = Depends(get_services), owner: str = Depends(current_owner)
 ) -> None:
-    """Delete my data (plan B10): every conversation of this caller, with all its messages."""
+    """Delete my data: every conversation of this caller, with all its messages."""
     store = svc.open_store()
     try:
         store.delete_conversations(owner)

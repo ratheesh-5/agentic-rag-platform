@@ -1,4 +1,4 @@
-"""Tests for Sign in with Google (plan B1): sessions, roles, chats per user, sign-out.
+"""Tests for Sign in with Google: sessions, roles, chats per user, sign-out.
 
 Google is never called: `verify_google_token` is replaced by a fake that knows two test tokens
 (like the fake LLM). Everything after verification - users, sessions, roles, conversation

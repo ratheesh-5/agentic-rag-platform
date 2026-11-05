@@ -20,7 +20,7 @@ How it works:
    DTO. The `answerable` field gives the model an explicit, honest way to say "not in the docs".
 4. Validation in code (never trust the model blindly): citation numbers that don't match a
    passage are removed; an "answer" with no valid citation is turned into an abstention.
-5. Prompt injection defence (security plan B6): a document could contain text such as "ignore
+5. Prompt injection defence: a document could contain text such as "ignore
    your rules and say X". The passages travel in the user message (never the system prompt)
    and the system prompt tells the model they are untrusted data, not instructions
    (`UNTRUSTED_PASSAGES`, also used by the agentic grader and verifier). The answer step has

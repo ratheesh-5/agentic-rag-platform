@@ -2,10 +2,10 @@
 
 Tables:
 - collections      named groups of documents ("AI Engineering Handbook", "HR policies"); a chat
-                   searches exactly one collection (plan section I). Collection 1 is the demo
+                   searches exactly one collection. Collection 1 is the demo
                    collection: evaluation, optimizer and CI gate work on it. `owner` is empty for
                    shared collections (managed by admins, searchable by everyone) and the owner
-                   hash of a signed-in user for PRIVATE ones (phase 2: only that user sees them).
+                   hash of a signed-in user for PRIVATE ones (only that user sees them).
                    Names are unique per owner (two users may both have "My resume").
 - documents        one row per source file: normalized text + content hash + chunking config,
                    and the collection it belongs to.
@@ -21,7 +21,7 @@ Tables:
                    for the Admin › Usage page; written by observability.UsageLogger.
 - recommendations  optimizer recommendations (report JSON) awaiting or after a human decision:
                    pending -> applied | rejected | superseded (a newer one replaced it).
-- conversations    chat conversations (Phase 6), each owned by one caller (stored as a hash)
+- conversations    chat conversations, each owned by one caller (stored as a hash)
                    and bound to the collection it started in.
 - messages         the turns of a conversation; assistant messages keep their sources and the
                    user's feedback (thumbs up/down) for later evaluation.
@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS collections (    -- groups of documents; a chat searc
     threshold REAL,                     -- similarity threshold: admin's manual override
     auto_threshold REAL                 -- ... measured automatically (retrieval/calibration.py)
 );
-CREATE TABLE IF NOT EXISTS users (      -- people who signed in with Google (plan B1)
+CREATE TABLE IF NOT EXISTS users (      -- people who signed in with Google
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     google_sub TEXT NOT NULL UNIQUE,    -- Google's stable user id ("sub" claim)
     email TEXT NOT NULL,
@@ -208,13 +208,13 @@ class Store:
             for col in ("threshold", "auto_threshold"):
                 if col not in cols:
                     self.conn.execute(f"ALTER TABLE collections ADD COLUMN {col} REAL")
-            # Model choice in Settings (plan G7): each score records its judge model.
+            # Model choice in Settings: each score records its judge model.
             cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(answer_scores)")}
             if "judge" not in cols:
                 self.conn.execute(
                     "ALTER TABLE answer_scores ADD COLUMN judge TEXT NOT NULL DEFAULT ''"
                 )
-            # Phase 2: names were unique for everyone; with private collections they are unique
+            # Names were unique for everyone; with private collections they are unique
             # per owner. SQLite can't drop a column constraint, so an old table is rebuilt once
             # (same ids; nothing references collections by foreign key).
             sql = self.conn.execute(
@@ -599,7 +599,7 @@ class Store:
             cur = self.conn.execute("DELETE FROM conversations WHERE owner = ?", (owner,))
         return cur.rowcount
 
-    # --- Collections (plan section I, phase 1) ------------------------------------------------
+    # --- Collections ------------------------------------------------
 
     def create_collection(self, name: str, description: str = "", owner: str = "") -> int:
         """A new collection: shared (owner '') or private to `owner` (a user's owner hash).
@@ -700,7 +700,7 @@ class Store:
             self.conn.execute("DELETE FROM collections WHERE id = ?", (collection_id,))
         return paths
 
-    # --- Users and sessions (Sign in with Google, plan B1) --------------------------------------
+    # --- Users and sessions (Sign in with Google) --------------------------------------
 
     def upsert_user(self, google_sub: str, email: str, name: str, picture: str) -> int:
         """Create the user on first sign-in, refresh name/email/picture later; returns the id."""
@@ -741,7 +741,7 @@ class Store:
             self.conn.execute("DELETE FROM sessions WHERE token_hash = ?", (token_hash,))
 
     def purge_older_than(self, chat_cutoff: str | None, usage_cutoff: str | None) -> dict:
-        """Retention (plan B10): delete conversations last active before `chat_cutoff` - their
+        """Retention: delete conversations last active before `chat_cutoff` - their
         messages, feedback and online scores go too (ON DELETE CASCADE) - and usage-log rows
         created before `usage_cutoff`. Cutoffs are ISO-8601 UTC times like the stored ones, so
         text comparison is time comparison. None = keep that data."""

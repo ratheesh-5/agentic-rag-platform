@@ -32,11 +32,12 @@ There are two ways to run it. Steps 1-5 are the same for both:
 8. [Option B - run locally for development](#8-option-b---run-locally-for-development)
 9. [First steps in the app](#9-first-steps-in-the-app)
 10. [Optional: Sign in with Google](#10-optional-sign-in-with-google)
-11. [Optional: LangSmith tracing](#11-optional-langsmith-tracing)
-12. [Command-line tool (`rag`) cheat sheet](#12-command-line-tool-rag-cheat-sheet)
-13. [Tests and quality checks](#13-tests-and-quality-checks)
-14. [Where data is stored, and how to reset](#14-where-data-is-stored-and-how-to-reset)
-15. [Troubleshooting](#15-troubleshooting)
+11. [Optional: second AI provider (Groq)](#11-optional-second-ai-provider-groq)
+12. [Optional: LangSmith tracing](#12-optional-langsmith-tracing)
+13. [Command-line tool (`rag`) cheat sheet](#13-command-line-tool-rag-cheat-sheet)
+14. [Tests and quality checks](#14-tests-and-quality-checks)
+15. [Where data is stored, and how to reset](#15-where-data-is-stored-and-how-to-reset)
+16. [Troubleshooting](#16-troubleshooting)
 
 ---
 
@@ -179,7 +180,7 @@ uv run python -c "import secrets; print(secrets.token_urlsafe(32))"
 |---|---|---|
 | `CHAT_MODEL` | `gemini-3.5-flash-lite` | Default answer model. If it is overloaded (errors 503/504), try e.g. `gemini-3.1-flash-lite`: each model has its own quota. Admin › Settings › Models can choose another model (and a backup model) without editing `.env` |
 | `EMBEDDING_MODEL` | `gemini-embedding-001` | **Don't change** unless you re-index every document |
-| `GROQ_API_KEY` | empty | Optional second answer model ([Groq](https://console.groq.com), free key): takes over when Gemini is out of quota or overloaded; chosen in Admin › Settings › Answer model. Search keeps using Gemini |
+| `GROQ_API_KEY` | empty | Optional second answer model - see [section 11](#11-optional-second-ai-provider-groq) |
 | `GROQ_MODEL`, `GROQ_REQUESTS_PER_MINUTE` | `openai/gpt-oss-120b`, 5 | Groq model and client-side limit (free tier: ~8,000 tokens per minute) |
 | `GUEST_QUESTIONS_PER_HOUR` | 20 | Questions per hour for visitors who don't sign in (per IP); 0 = guests off |
 | `GOOGLE_CLIENT_ID`, `ADMIN_EMAILS` | empty | Sign in with Google - see [section 10](#10-optional-sign-in-with-google) |
@@ -190,7 +191,7 @@ uv run python -c "import secrets; print(secrets.token_urlsafe(32))"
 | `ONLINE_EVAL_SAMPLE_RATE` | 0.2 | Share of chat answers scored in the background (1 in 5; uses extra AI calls); 0 = off |
 | `MAX_UPLOAD_MB` | 10 | Largest document upload |
 | `CORS_ORIGINS` | `http://localhost:4200` | Web apps on another address that may call the API (Option B) |
-| `LANGSMITH_*` | off | Tracing - see [section 11](#11-optional-langsmith-tracing) |
+| `LANGSMITH_*` | off | Tracing - see [section 12](#12-optional-langsmith-tracing) |
 
 Search settings (chunk size, number of passages, hybrid search, similarity threshold, answer
 mode, answer model) are **not** in `.env`: they live in `rag_config.json` and are changed from the app
@@ -399,8 +400,18 @@ Stop either one with **Ctrl+C**.
     - **Evaluation** - *Run quality check* measures search quality on the 50-question test set
      in about a second, with no AI calls; *Live quality* shows how real chat answers score.
     - **Usage** - AI calls, tokens, latency and errors.
-    - **Settings** - the active configuration, the answer mode (Fast / Agentic / Auto), and
-     *Find better settings* (the multi-agent optimizer; makes a few AI calls).
+    - **Settings** - the active configuration, the answer mode (Fast / Agentic / Auto), the
+     answer models (**Models**: pick a model and a backup model; *Check quality* tests it on 6
+     demo questions before it can be saved), and *Find better settings* (the multi-agent
+     optimizer; makes a few AI calls).
+4. **More in the chat:**
+    - **Search in** - with two or more collections, the welcome screen lets you pick which one a
+      new chat searches.
+    - **Analyse all documents** (signed-in users and admins) - a switch under the question box
+      for questions about a whole collection ("compare these policies"): the answer reads every
+      relevant document and says how many it read. Costs a few more AI calls.
+    - **My documents** (users signed in with Google) - your own private collections: upload
+      documents only you can ask about. Nobody else sees them, not even admins.
 
 ---
 
@@ -440,7 +451,29 @@ the app simply shows the "Admin sign in" (key) button instead.
 
 ---
 
-## 11. Optional: LangSmith tracing
+## 11. Optional: second AI provider (Groq)
+
+Free AI quotas run out and services get busy. With a Groq key, a second provider writes the
+answer when Gemini is out of quota, overloaded or too slow - automatically, the user doesn't
+notice. Search (embeddings) always stays on Gemini.
+
+1. Open https://console.groq.com, sign in and go to **API Keys → Create API Key**. Copy the key
+    (it is shown only once).
+2. In `.env`:
+
+        GROQ_API_KEY=your-groq-key
+
+3. Restart the API and run `uv run rag check`: it now also prints a `chat model (groq)` line.
+4. In **Admin › Settings › Answer model** choose which provider answers first and keep
+    **Automatic fallback** on. **Admin › Settings › Models** picks the exact models and a backup
+    model per provider; a new model must pass the built-in quality check before it is saved.
+
+The free Groq tier allows about 8,000 tokens per minute (a few answers); the app keeps to
+`GROQ_REQUESTS_PER_MINUTE` (default 5).
+
+---
+
+## 12. Optional: LangSmith tracing
 
 Shows every request as a tree of steps (prompts, tokens, timings) in the LangSmith web app.
 
@@ -456,13 +489,13 @@ Shows every request as a tree of steps (prompts, tokens, timings) in the LangSmi
 
 ---
 
-## 12. Command-line tool (`rag`) cheat sheet
+## 13. Command-line tool (`rag`) cheat sheet
 
 Run `uv run rag --help` or `uv run rag <command> --help` for every option.
 
 | Command | What it does | AI calls |
 |---|---|---|
-| `uv run rag check` | Test the Gemini key | 2 |
+| `uv run rag check` | Test the keys (Gemini, and Groq if set) | 2-3 |
 | `uv run rag inspect` | Show how documents are split into passages | none |
 | `uv run rag ingest [folder-or-file] [--collection NAME]` | Index documents (default `data/sample_corpus`, into the demo collection; a new NAME creates the collection); only new/changed text is embedded | embeddings for new text |
 | `uv run rag delete <path>` | Remove a document from the index | none |
@@ -476,7 +509,7 @@ Run `uv run rag --help` or `uv run rag <command> --help` for every option.
 
 ---
 
-## 13. Tests and quality checks
+## 14. Tests and quality checks
 
 None of these call Gemini: the tests use fake models.
 
@@ -490,7 +523,7 @@ uv run rag gate                                # retrieval quality gate (Recall@
 Expected output of `pytest` (last line) and `rag gate`:
 
 ```text
-193 passed in 58.89s
+244 passed in 89.55s
 ```
 
 ```text
@@ -513,7 +546,7 @@ see `.github/workflows/ci.yml`.
 
 ---
 
-## 14. Where data is stored, and how to reset
+## 15. Where data is stored, and how to reset
 
 | Path | Contents | In Git? |
 |---|---|---|
@@ -533,7 +566,7 @@ FAISS file alone can be deleted any time: it is rebuilt from the database withou
 
 ---
 
-## 15. Troubleshooting
+## 16. Troubleshooting
 
 | Problem | Cause and fix |
 |---|---|

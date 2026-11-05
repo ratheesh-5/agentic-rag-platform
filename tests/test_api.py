@@ -1,4 +1,4 @@
-"""Tests for the REST API (Phase 5), with fake models - no API calls, no running server.
+"""Tests for the REST API, with fake models - no API calls, no running server.
 
 FastAPI's TestClient sends real HTTP requests to the app in-process (.NET analogy:
 WebApplicationFactory + HttpClient). `app.dependency_overrides` swaps the real services
@@ -390,7 +390,7 @@ def test_dense_search_never_builds_the_keyword_index(client, monkeypatch):
     assert calls == []  # dense config: BM25 is only built when hybrid search needs it
 
 
-# --- prompt-injection scan of documents (plan B6): warn, never block ---------------------------
+# --- prompt-injection scan of documents: warn, never block ---------------------------
 
 
 @pytest.mark.parametrize(
@@ -448,7 +448,7 @@ def test_suspicious_upload_is_indexed_with_a_warning(client, caplog):
     assert flagged and flagged[0].lines == 1  # logged without the document's text
 
 
-# --- request log (plan D1): JSON lines, one request id per request, no question text ---------
+# --- request log: JSON lines, one request id per request, no question text ---------
 # pytest's `caplog` fixture collects the log records written during a test (.NET analogy: a test
 # ILoggerProvider that keeps entries in memory).
 

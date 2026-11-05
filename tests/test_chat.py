@@ -418,7 +418,7 @@ def test_quality_test_does_not_judge_a_refusal(chat):
     assert body["answerable"] is False and body["faithfulness"] is None and judge.seen == []
 
 
-# --- data retention (plan B10) ---------------------------------------------------------------
+# --- data retention ---------------------------------------------------------------
 
 
 def test_delete_all_conversations_removes_only_the_callers(chat):

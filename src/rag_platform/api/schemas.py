@@ -118,7 +118,7 @@ class ModelCheckItem(BaseModel):
 
 
 class ModelCheck(BaseModel):
-    """Quality check of one answer model (plan G7): a few demo questions answered with exactly
+    """Quality check of one answer model: a few demo questions answered with exactly
     that model; it must pass before the model can be used for answers."""
 
     kind: Literal["gemini", "groq"]
@@ -226,12 +226,12 @@ class AssistantProfile(BaseModel):
     description: str = "I answer questions from the indexed documents and cite my sources."
     topics: list[Topic] = []
     # From the server settings (not assistant.json): chats without activity this long are deleted
-    # (plan B10); 0 = kept. The chat shows it as a privacy note.
+    # daily; 0 = kept. The chat shows it as a privacy note.
     chat_retention_days: int = 0
 
 
 class UserInfo(BaseModel):
-    """A user signed in with Google (plan B1), as shown in the UI's account menu."""
+    """A user signed in with Google, as shown in the UI's account menu."""
 
     email: str
     name: str
@@ -262,7 +262,7 @@ class SignInResponse(BaseModel):
 
 
 class Collection(BaseModel):
-    """A named group of documents; a chat searches exactly one collection (plan section I)."""
+    """A named group of documents; a chat searches exactly one collection."""
 
     id: int
     name: str
@@ -270,7 +270,7 @@ class Collection(BaseModel):
     documents: int
     passages: int
     is_default: bool  # the demo collection: evaluation works on it; it can't be deleted
-    is_private: bool  # only its owner sees it (phase 2)
+    is_private: bool  # only its owner sees it
     can_manage: bool  # the caller may upload into / rename / delete it
     # Similarity threshold used for its questions and where it comes from: "measured" (demo
     # collection, rag_config.json), "manual" (admin override), "automatic" (probe questions,
@@ -310,7 +310,7 @@ class DocumentInfo(BaseModel):
     chunks: int
     chunker: str
     ingested_at: str
-    # Lines that look like instructions to an AI (prompt-injection scan, plan B6); [] = clean.
+    # Lines that look like instructions to an AI (prompt-injection scan); [] = clean.
     # A warning only: the document is indexed, the admin checks it.
     warnings: list[str] = []
 

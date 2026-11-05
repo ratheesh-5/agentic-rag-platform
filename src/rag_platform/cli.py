@@ -248,7 +248,7 @@ def serve(
         typer.echo("Warning: API_KEYS is empty - every protected endpoint will return 503.")
     from rag_platform.observability import LOG_CONFIG
 
-    # JSON log lines on stdout (plan D1); the request middleware replaces uvicorn's access log.
+    # JSON log lines on stdout; the request middleware replaces uvicorn's access log.
     uvicorn.run(
         "rag_platform.api.app:app",
         host=host,

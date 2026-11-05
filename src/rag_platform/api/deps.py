@@ -14,7 +14,7 @@ Writes (upload, delete) take a process-wide lock so two requests never update SQ
 FAISS file at the same time; reads (ask, list) run in parallel.
 
 Callers (see current_caller):
-- Signed-in user (Sign in with Google, plan B1; api/auth.py): sends our session token as
+- Signed-in user (Sign in with Google; api/auth.py): sends our session token as
   "Authorization: Bearer ...". Chats on every device; USER_QUESTIONS_PER_HOUR. An admin when the
   email is in ADMIN_EMAILS.
 - Admin by key: sends one of API_KEYS in X-API-Key (scripts, CLI tools, the UI's fallback when
@@ -249,7 +249,7 @@ def optional_caller(
     return current_caller(key, bearer, guest_id, svc)
 
 
-# --- Collections: who may see / manage one (plan section I, phase 2) -------------------------
+# --- Collections: who may see / manage one -------------------------
 # Every endpoint that takes a collection asks these, so the rule exists exactly once:
 #   shared (owner '')   -> everyone may search it; admins manage it;
 #   private (owner set) -> only its owner, a signed-in user, may search AND manage it - not

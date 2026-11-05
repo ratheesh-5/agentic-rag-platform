@@ -1,4 +1,4 @@
-"""Admin endpoints for the usage log (Phase 7 observability).
+"""Admin endpoints for the usage log.
 
     GET /usage/summary?days=14     calls, tokens, latency, errors, cost per purpose/model/day
     GET /usage/trace/{run_id}      link to that call's trace in LangSmith (if tracing is on)

@@ -1,4 +1,4 @@
-# Dependabot (security plan B12): GitHub checks our dependencies every week and opens pull
+# Dependabot: GitHub checks our dependencies every week and opens pull
 # requests with updates; security fixes are proposed as soon as an advisory is published.
 # Each pull request runs the normal CI (tests, quality gate, audit), so an update is only
 # merged when everything still passes. Minor/patch updates are grouped into one PR per

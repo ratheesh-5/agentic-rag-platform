@@ -13,11 +13,11 @@ Rate limiting: hosted models enforce requests-per-minute quotas (the Gemini free
 gets a client-side token-bucket limiter that makes calls wait for a free slot. The limiter is
 shared per model name, because the provider's quota is per model, not per client object.
 
-Usage log (Phase 7): every chat model gets a UsageLogger callback (one SQLite row per call) and
+Usage log: every chat model gets a UsageLogger callback (one SQLite row per call) and
 embeddings are logged by RateLimitedEmbeddings; see observability.py. LangSmith tracing is
 switched on by the API (deps.get_services) and by CLI commands given --trace-langsmith.
 
-Two chat providers (plan G2/G5): Gemini, and Groq when GROQ_API_KEY is set. FallbackChat puts
+Two chat providers: Gemini, and Groq when GROQ_API_KEY is set. FallbackChat puts
 them in the order chosen in Admin › Settings and moves on to the next one when a provider is out
 of quota, overloaded or too slow. Embeddings always come from Gemini: vectors of different
 models can't be compared, so switching would mean re-indexing every document.

@@ -1,8 +1,8 @@
 """Release gates: pass/fail thresholds for evaluation metrics (the LLM Evaluation Playbook's
 "Release gates" table), kept in data/eval/release_gates.json.
 
-Used by the admin UI today (a pass/fail badge per run) and by the CI regression gate later
-(Phase 7), so the thresholds live in one file instead of being repeated in code.
+Used by the admin UI (a pass/fail badge per run) and by the CI regression gate, so the
+thresholds live in one file instead of being repeated in code.
 
 A gate that needs real answers (abstention, faithfulness, correctness, latency) is "n/a" for a
 retrieval-only run: that run never calls the LLM, so judging it on those metrics would be wrong.

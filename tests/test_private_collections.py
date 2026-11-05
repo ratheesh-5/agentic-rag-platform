@@ -1,4 +1,4 @@
-"""Tests for private collections (plan section I, phase 2): every signed-in user can keep their
+"""Tests for private collections: every signed-in user can keep their
 own documents, and NOBODY else - other users, guests, admins - can see, search or change them.
 
 Users sign in through a faked Google check (like test_auth.py); everything after that (sessions,
@@ -222,7 +222,7 @@ def test_delete_my_account_removes_everything_of_that_user_only(env):
 
 def test_an_old_database_gets_names_unique_per_owner(tmp_path):
     db = tmp_path / "old.db"
-    old = sqlite3.connect(db)  # phase 1: names unique for everyone
+    old = sqlite3.connect(db)  # old schema: names unique for everyone
     old.executescript(
         "CREATE TABLE collections (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL"
         " UNIQUE, description TEXT NOT NULL, owner TEXT NOT NULL DEFAULT '',"

@@ -1,4 +1,4 @@
-"""Tests for collections (plan section I, phase 1): named groups of documents, each searched on
+"""Tests for collections: named groups of documents, each searched on
 its own. The most important property is ISOLATION: a question in one collection must never see
 a passage of another - in dense and hybrid search, in chats and their follow-ups.
 

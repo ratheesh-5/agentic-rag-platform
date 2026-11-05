@@ -1,6 +1,6 @@
 """Observability: LangSmith tracing (hosted) + a local usage log (SQLite) of every model call.
 
-Two complementary views (Phase 7):
+Two complementary views:
 - LangSmith (optional): every request becomes a TRACE - a tree of steps with prompts, outputs,
   tokens, latency and errors - viewed in the LangSmith web app. LangChain sends traces by itself
   once LANGSMITH_TRACING / LANGSMITH_API_KEY are environment variables; `configure_tracing`
@@ -12,7 +12,7 @@ Two complementary views (Phase 7):
   model. The Admin › Usage page aggregates it (`usage_report`); cost is computed only from
   prices the owner enters in model_prices.json (no real prices are hard-coded).
 
-- Application log (plan D1, API only): one JSON line per event on stdout - per HTTP request
+- Application log (API only): one JSON line per event on stdout - per HTTP request
   (method, path, status, duration), per model call (purpose, tokens, latency, LangSmith run id)
   and per answer (route, answerable, citations). Every line of one request carries the same
   `request_id`, so `docker compose logs api | grep <id>` shows that request's whole story, and

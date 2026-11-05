@@ -5,17 +5,19 @@ products.
 
 | Area | What it does |
 |---|---|
-| **Chat** (`/chat`, `/chat?c=5`) | Conversation thread with memory: follow-ups like "and who holds that role?" are understood from earlier turns. Cited answers: click a citation badge or source chip to read the passage, hover for a preview, copy, 👍/👎, typing indicator. New users see what they can ask (topics + example questions from the API's `GET /assistant`), "Related" question chips under an answer (from the cited documents' topics), day separators ("Today, October 13", "Yesterday, ...", then the date) with message times, and topic suggestions when the documents don't cover a question |
+| **Chat** (`/chat`, `/chat?c=5`) | Conversation thread with memory: follow-ups like "and who holds that role?" are understood from earlier turns. Cited answers: click a citation badge or source chip to read the passage, hover for a preview, copy, 👍/👎, typing indicator. New users see what they can ask (topics + example questions from the API's `GET /assistant`), "Related" question chips under an answer (from the cited documents' topics), day separators ("Today, October 13", "Yesterday, ...", then the date) with message times, and topic suggestions when the documents don't cover a question. **Search in** picks the collection a new chat searches; **Analyse all documents** (signed-in users) answers from every document of a collection |
 | **Sidebar** | New chat, recent conversations (delete on hover), Admin links (admins only); on phones a ☰ menu |
-| **Admin › Documents** | Drag-and-drop upload of several `.md/.txt/.pdf/.docx` files (validated and indexed by the API, status per file), summary tiles, searchable list with type filter, delete |
+| **My documents** (`/documents`, signed in with Google) | The user's private collections: create, rename, delete, upload - nobody else sees them, not even admins. **Delete my account** is in the account menu |
+| **Admin › Documents** | Collections (new, rename, delete) and drag-and-drop upload of several `.md/.txt/.pdf/.docx` files (validated and indexed by the API, status per file), summary tiles, searchable list with type filter, delete |
 | **Admin › Evaluation** | **Live quality** tab: clickable KPI tiles, **Test a question** (answer, score bars, passages), suggestions, every answer with its scores (filter, search, expand), per document, "Include admin chats" switch. **Test-set checks** tab: status card against the release gates, **Run quality check** (seconds, no model calls) or **Use my test set** (upload `.jsonl`), runs by type, hide old runs, details with the questions to look at |
 | **Admin › Usage** | Model calls, tokens, latency, errors and (with prices in `model_prices.json`) cost per day, purpose and model. Tiles, chart days, purposes and models filter one list of calls (sort, search, expand); each call opens its LangSmith trace |
-| **Admin › Settings** | Measure → Review → Apply steps, the optimizer's recommendation with **Apply / Reject** (human approval) and its measured effect, the active configuration in plain words (changed settings marked), API status |
+| **Admin › Settings** | Answer mode (fast / agentic / auto), answer provider with automatic fallback, **Models** (answer, backup and judge models; a new model must pass **Check quality**), Measure → Review → Apply steps, the optimizer's recommendation with **Apply / Reject** (human approval) and its measured effect, the active configuration in plain words (changed settings marked), API status |
 
 **Production vs development:** `npm run build` (production) shows only the chat. In
 development (`npm start`) every answer also shows how a follow-up was understood, the agentic
-steps and abstention reasons. Answer mode (fast/agentic) and search (dense/hybrid) are backend
-settings in `rag_config.json`; the UI never chooses them.
+steps and abstention reasons. Search settings (dense/hybrid, threshold, top-k) are backend settings in `rag_config.json`,
+changed only through the optimizer's recommendation; the answer mode and models are switched in
+Admin › Settings.
 
 ## Run
 

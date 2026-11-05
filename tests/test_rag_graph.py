@@ -177,7 +177,7 @@ def test_build_answerer_fast_mode_makes_one_llm_call(deps):
 
 
 def test_agents_that_read_passages_treat_them_as_untrusted_data():
-    # Security plan B6: every prompt that shows document passages carries the same rule.
+    # Prompt injection: every prompt that shows document passages carries the same rule.
     from rag_platform.agents.rag_graph.graph import GRADER_PROMPT, VERIFIER_PROMPT
     from rag_platform.generation.answer import SYSTEM_PROMPT, UNTRUSTED_PASSAGES
 
