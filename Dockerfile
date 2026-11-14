@@ -5,7 +5,7 @@
 # pyproject.toml + uv.lock (cached as long as they don't change), then the source.
 # .NET analogy: like a multi-stage Dockerfile that runs `dotnet restore` before copying the code.
 
-FROM python:3.12-slim
+FROM python:3.15-slim
 
 # uv (the package manager) copied from its official image; pinned to the version used locally.
 COPY --from=ghcr.io/astral-sh/uv:0.13.0 /uv /uvx /bin/
